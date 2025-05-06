@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ONSdigital/dis-redirect-api/config"
-	"github.com/ONSdigital/dis-redirect-api/service"
-	"github.com/ONSdigital/dis-redirect-api/service/mock"
+	"github.com/ONSdigital/dis-redirect-proxy/config"
+	"github.com/ONSdigital/dis-redirect-proxy/service"
+	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"

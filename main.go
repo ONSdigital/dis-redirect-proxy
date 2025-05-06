@@ -15,7 +15,7 @@ import (
 	dpotelgo "github.com/ONSdigital/dp-otel-go"
 )
 
-const serviceName = "dis-redirect-api"
+const serviceName = "dis-redirect-proxy"
 
 var (
 	// BuildTime represents the time in which the service was built
@@ -51,7 +51,7 @@ func run(ctx context.Context) error {
 	svcErrors := make(chan error, 1)
 	svcList := service.NewServiceList(&service.Init{})
 
-	log.Info(ctx, "dis-redirect-api version", log.Data{"version": Version})
+	log.Info(ctx, "dis-redirect-proxy version", log.Data{"version": Version})
 
 	// Read config
 	cfg, err := config.Get()

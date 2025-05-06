@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.2'
+
+  dis-redirect-proxy-audit:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run GoList
+        run:  go list -json -m all > go.list
+      - name: Run up nancy
+        uses: sonatype-nexus-community/nancy-github-action@main
+        with:
+          nancyVersion: "v1.0.48"
+
+  dis-redirect-proxy-build:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run build checks
+        run: make build
+
+  dis-redirect-proxy-lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.64.6
+
+  dis-redirect-proxy-unit:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run unit checks
+        run: make test
+
+  dis-redirect-proxy-component:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run component tests
+        run: make test-component

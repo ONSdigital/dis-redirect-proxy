@@ -3,7 +3,6 @@ module github.com/ONSdigital/dis-redirect-proxy
 go 1.24.2
 
 require (
-	github.com/ONSdigital/dis-redirect-api v0.0.0-20250501142104-08fb787e7b10
 	github.com/ONSdigital/dp-component-test v0.20.0
 	github.com/ONSdigital/dp-healthcheck v1.6.4
 	github.com/ONSdigital/dp-net/v3 v3.3.0
