@@ -8,7 +8,7 @@ A Go Service to redirect legacy URLs requested by users
 * Run `make help` to see full list of make targets
 
 ### Dependencies
-
+TEST
 * No further dependencies other than those defined in `go.mod`
 
 ### Configuration
