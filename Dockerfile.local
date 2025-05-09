@@ -1,0 +1,9 @@
+FROM golang:1.24.2-bullseye AS build
+
+ENV GOCACHE=/go/.go/cache GOPATH=/go/.go/path TZ=Europe/London
+
+RUN git config --global --add safe.directory /go
+
+# Map between the working directories of dev and live
+RUN ln -s /go /dis-redirect-proxy
+WORKDIR /dis-redirect-proxy
