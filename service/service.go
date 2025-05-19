@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
+	disRedis "github.com/ONSdigital/dis-redis"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -45,7 +46,15 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		return nil, err
 	}
 
-	if err := registerCheckers(ctx, hc); err != nil {
+	clientConfig := &disRedis.ClientConfig{}
+	cli, err := disRedis.NewClient(ctx, clientConfig)
+
+	if err != nil {
+		log.Fatal(ctx, "could not create redis client", err)
+		return nil, err
+	}
+
+	if err := registerCheckers(ctx, hc, cli); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -74,7 +83,7 @@ func (svc *Service) Close(ctx context.Context) error {
 	log.Info(ctx, "commencing graceful shutdown", log.Data{"graceful_shutdown_timeout": timeout})
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 
-	// track shutown gracefully closes up
+	// track shutdown gracefully closes up
 	var hasShutdownError bool
 
 	go func() {
@@ -115,8 +124,17 @@ func (svc *Service) Close(ctx context.Context) error {
 }
 
 func registerCheckers(ctx context.Context,
-	hc HealthChecker) (err error) {
-	// TODO: add other health checks here, as per dp-upload-service
+	hc HealthChecker, redisCli *disRedis.Client) (err error) {
+	hasErrors := false
+
+	if err = hc.AddCheck("Redis", redisCli.Checker); err != nil {
+		hasErrors = true
+		log.Error(ctx, "error adding check for redis", err)
+	}
+
+	if hasErrors {
+		return errors.New("Error(s) registering checkers for healthcheck")
+	}
 
 	return nil
 }
