@@ -3,6 +3,7 @@ module github.com/ONSdigital/dis-redirect-proxy
 go 1.24.2
 
 require (
+	github.com/ONSdigital/dis-redis v0.1.0
 	github.com/ONSdigital/dp-component-test v0.20.0
 	github.com/ONSdigital/dp-healthcheck v1.6.4
 	github.com/ONSdigital/dp-net/v3 v3.3.0
@@ -18,7 +19,6 @@ require (
 )
 
 require (
-	github.com/ONSdigital/dis-redis v0.1.0 // indirect
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.266.0 // indirect
 	github.com/ONSdigital/dp-mongodb-in-memory v1.8.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
