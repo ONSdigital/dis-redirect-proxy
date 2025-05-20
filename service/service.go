@@ -47,14 +47,14 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 	}
 
 	clientConfig := &disRedis.ClientConfig{}
-	cli, err := disRedis.NewClient(ctx, clientConfig)
+	redisCli, err := disRedis.NewClient(ctx, clientConfig)
 
 	if err != nil {
 		log.Fatal(ctx, "could not create redis client", err)
 		return nil, err
 	}
 
-	if err := registerCheckers(ctx, hc, cli); err != nil {
+	if err := registerCheckers(ctx, hc, redisCli); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
