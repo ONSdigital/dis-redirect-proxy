@@ -3,8 +3,11 @@ package config
 import (
 	"time"
 
+	disRedis "github.com/ONSdigital/dis-redis"
 	"github.com/kelseyhightower/envconfig"
 )
+
+type RedisConfig = disRedis.ClientConfig
 
 // Config represents service configuration for dis-redirect-proxy
 type Config struct {
@@ -16,6 +19,7 @@ type Config struct {
 	OTExporterOTLPEndpoint     string        `envconfig:"OTEL_EXPORTER_OTLP_ENDPOINT"`
 	OTServiceName              string        `envconfig:"OTEL_SERVICE_NAME"`
 	OtelEnabled                bool          `envconfig:"OTEL_ENABLED"`
+	RedisConfig
 }
 
 var cfg *Config

@@ -39,6 +39,15 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	// TODO: Add other(s) to serviceList here
 
+	// Get Redis client
+	var redisErr error
+	serviceList.RedisCli, redisErr = GetRedisClient(ctx)
+
+	if redisErr != nil {
+		log.Fatal(ctx, "failed to initialise dis-redis", redisErr)
+		return nil, redisErr
+	}
+
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
 
 	if err != nil {
@@ -46,15 +55,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		return nil, err
 	}
 
-	clientConfig := &disRedis.ClientConfig{}
-	redisCli, err := disRedis.NewClient(ctx, clientConfig)
-
-	if err != nil {
-		log.Fatal(ctx, "could not create redis client", err)
-		return nil, err
-	}
-
-	if err := registerCheckers(ctx, hc, redisCli); err != nil {
+	if err := registerCheckers(ctx, hc, &serviceList.RedisCli); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
