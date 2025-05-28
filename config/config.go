@@ -40,6 +40,9 @@ func Get() (*Config, error) {
 		OTExporterOTLPEndpoint:     "localhost:4317",
 		OTServiceName:              "dis-redirect-proxy",
 		OtelEnabled:                false,
+		RedisConfig: RedisConfig{
+			Address: "",
+		},
 	}
 
 	return cfg, envconfig.Process("", cfg)

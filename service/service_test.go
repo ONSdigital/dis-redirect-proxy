@@ -24,6 +24,7 @@ var (
 	testGitCommit = "GitCommit"
 	testVersion   = "Version"
 	errServer     = errors.New("HTTP Server error")
+	errRedis      = errors.New("failed to initialise redis")
 )
 
 var (
@@ -75,10 +76,35 @@ func TestRun(t *testing.T) {
 			return failingServerMock
 		}
 
-		redisMock := &mock.RedisMock{}
-		service.GetRedisClient = func(ctx context.Context) (service.RedisClient, error) {
-			return redisMock, nil
+		redisClientMock := &mock.RedisClientMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+				return nil
+			},
 		}
+		service.GetRedisClient = func(ctx context.Context) (service.RedisClient, error) {
+			return redisClientMock, nil
+		}
+
+		Convey("Given that creating a redis client returns an error", func() {
+			initMock := &mock.InitialiserMock{
+				DoGetHTTPServerFunc:  funcDoGetHTTPServerNil,
+				DoGetHealthCheckFunc: funcDoGetHealthcheckErr,
+			}
+			svcErrors := make(chan error, 1)
+			svcList := service.NewServiceList(initMock)
+			service.GetRedisClient = func(ctx context.Context) (service.RedisClient, error) {
+				return nil, errRedis
+			}
+
+			Convey("Then service Run fails with the same error and no further initialisations are attempted", func() {
+				_, err := service.Run(ctx, cfg, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
+				So(err, ShouldResemble, errRedis)
+
+				Convey("And no checkers are registered ", func() {
+					So(hcMock.AddCheckCalls(), ShouldHaveLength, 0)
+				})
+			})
+		})
 
 		Convey("Given that initialising healthcheck returns an error", func() {
 			// setup (run before each `Convey` at this scope / indentation):
