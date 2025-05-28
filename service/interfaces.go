@@ -36,5 +36,4 @@ type HealthChecker interface {
 // Redis defines the required methods for Redis
 type Redis interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
-	//NewClient(ctx context.Context, clientConfig *disRedis.ClientConfig)
 }

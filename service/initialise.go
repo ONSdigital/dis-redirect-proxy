@@ -62,18 +62,6 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 	return &hc, nil
 }
 
-//var GetRedisClient = func(ctx context.Context) (disRedis.Client, error) {
-//	clientConfig := &disRedis.ClientConfig{}
-//	redisClient, err := disRedis.NewClient(ctx, clientConfig)
-//
-//	if err != nil {
-//		log.Error(ctx, "Failed to create dis-redis client", err)
-//		return disRedis.Client{}, err
-//	}
-//
-//	return *redisClient, nil
-//}
-
 var GetRedisClient = func(ctx context.Context) (Redis, error) {
 	clientConfig := &disRedis.ClientConfig{}
 	redisClient, err := disRedis.NewClient(ctx, clientConfig)
