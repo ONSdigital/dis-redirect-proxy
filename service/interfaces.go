@@ -11,6 +11,7 @@ import (
 //go:generate moq -out mock/initialiser.go -pkg mock . Initialiser
 //go:generate moq -out mock/server.go -pkg mock . HTTPServer
 //go:generate moq -out mock/healthCheck.go -pkg mock . HealthChecker
+//go:generate moq -out mock/redis.go -pkg mock . Redis
 
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
@@ -30,4 +31,10 @@ type HealthChecker interface {
 	Start(ctx context.Context)
 	Stop()
 	AddCheck(name string, checker healthcheck.Checker) (err error)
+}
+
+// Redis defines the required methods for Redis
+type Redis interface {
+	Checker(ctx context.Context, state *healthcheck.CheckState) error
+	//NewClient(ctx context.Context, clientConfig *disRedis.ClientConfig)
 }

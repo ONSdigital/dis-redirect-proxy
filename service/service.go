@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
-	disRedis "github.com/ONSdigital/dis-redis"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -55,7 +54,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		return nil, err
 	}
 
-	if err := registerCheckers(ctx, hc, &serviceList.RedisCli); err != nil {
+	if err := registerCheckers(ctx, hc, serviceList.RedisCli); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -125,7 +124,7 @@ func (svc *Service) Close(ctx context.Context) error {
 }
 
 func registerCheckers(ctx context.Context,
-	hc HealthChecker, redisCli *disRedis.Client) (err error) {
+	hc HealthChecker, redisCli Redis) (err error) {
 	hasErrors := false
 
 	if err = hc.AddCheck("Redis", redisCli.Checker); err != nil {

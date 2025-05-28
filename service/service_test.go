@@ -75,6 +75,11 @@ func TestRun(t *testing.T) {
 			return failingServerMock
 		}
 
+		redisMock := &mock.RedisMock{}
+		service.GetRedisClient = func(ctx context.Context) (service.Redis, error) {
+			return redisMock, nil
+		}
+
 		Convey("Given that initialising healthcheck returns an error", func() {
 			// setup (run before each `Convey` at this scope / indentation):
 			initMock := &mock.InitialiserMock{
