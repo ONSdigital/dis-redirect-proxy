@@ -38,7 +38,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	// TODO: Add other(s) to serviceList here
 
-	// Get Redis client
+	// Get RedisClient client
 	var redisErr error
 	serviceList.RedisCli, redisErr = GetRedisClient(ctx)
 
@@ -124,7 +124,7 @@ func (svc *Service) Close(ctx context.Context) error {
 }
 
 func registerCheckers(ctx context.Context,
-	hc HealthChecker, redisCli Redis) (err error) {
+	hc HealthChecker, redisCli RedisClient) (err error) {
 	hasErrors := false
 
 	if err = hc.AddCheck("Redis", redisCli.Checker); err != nil {

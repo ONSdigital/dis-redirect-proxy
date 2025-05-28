@@ -10,22 +10,22 @@ import (
 	"sync"
 )
 
-// Ensure, that RedisMock does implement service.Redis.
+// Ensure, that RedisMock does implement service.RedisClient.
 // If this is not the case, regenerate this file with moq.
-var _ service.Redis = &RedisMock{}
+var _ service.RedisClient = &RedisMock{}
 
-// RedisMock is a mock implementation of service.Redis.
+// RedisMock is a mock implementation of service.RedisClient.
 //
 // 	func TestSomethingThatUsesRedis(t *testing.T) {
 //
-// 		// make and configure a mocked service.Redis
+// 		// make and configure a mocked service.RedisClient
 // 		mockedRedis := &RedisMock{
 // 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 				panic("mock out the Checker method")
 // 			},
 // 		}
 //
-// 		// use mockedRedis in code that requires service.Redis
+// 		// use mockedRedis in code that requires service.RedisClient
 // 		// and then make assertions.
 //
 // 	}
@@ -49,7 +49,7 @@ type RedisMock struct {
 // Checker calls CheckerFunc.
 func (mock *RedisMock) Checker(ctx context.Context, state *healthcheck.CheckState) error {
 	if mock.CheckerFunc == nil {
-		panic("RedisMock.CheckerFunc: method is nil but Redis.Checker was just called")
+		panic("RedisMock.CheckerFunc: method is nil but RedisClient.Checker was just called")
 	}
 	callInfo := struct {
 		Ctx   context.Context

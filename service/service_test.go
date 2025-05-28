@@ -76,7 +76,7 @@ func TestRun(t *testing.T) {
 		}
 
 		redisMock := &mock.RedisMock{}
-		service.GetRedisClient = func(ctx context.Context) (service.Redis, error) {
+		service.GetRedisClient = func(ctx context.Context) (service.RedisClient, error) {
 			return redisMock, nil
 		}
 

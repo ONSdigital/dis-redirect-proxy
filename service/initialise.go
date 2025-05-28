@@ -15,7 +15,7 @@ import (
 type ExternalServiceList struct {
 	HealthCheck bool
 	Init        Initialiser
-	RedisCli    Redis
+	RedisCli    RedisClient
 }
 
 // NewServiceList creates a new service list with the provided initialiser
@@ -62,7 +62,7 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 	return &hc, nil
 }
 
-var GetRedisClient = func(ctx context.Context) (Redis, error) {
+var GetRedisClient = func(ctx context.Context) (RedisClient, error) {
 	clientConfig := &disRedis.ClientConfig{}
 	redisClient, err := disRedis.NewClient(ctx, clientConfig)
 

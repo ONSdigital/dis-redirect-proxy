@@ -33,7 +33,7 @@ type HealthChecker interface {
 	AddCheck(name string, checker healthcheck.Checker) (err error)
 }
 
-// Redis defines the required methods for Redis
-type Redis interface {
+// RedisClient defines the required methods for RedisClient
+type RedisClient interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 }
