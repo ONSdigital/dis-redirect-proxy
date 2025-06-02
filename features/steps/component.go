@@ -5,49 +5,59 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ONSdigital/log.go/v2/log"
+
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dis-redirect-proxy/service"
 	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
-
-	componenttest "github.com/ONSdigital/dp-component-test"
+	componentTest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 )
 
+const (
+	gitCommitHash = "3t7e5s1t4272646ef477f8ed755"
+	appVersion    = "v1.2.3"
+)
+
 type Component struct {
-	componenttest.ErrorFeature
+	componentTest.ErrorFeature
 	svcList        *service.ExternalServiceList
 	svc            *service.Service
-	errorChan      chan error
+	svcErrors      chan error
 	Config         *config.Config
 	HTTPServer     *http.Server
 	ServiceRunning bool
-	apiFeature     *componenttest.APIFeature
+	apiFeature     *componentTest.APIFeature
+	StartTime      time.Time
 }
 
-func NewComponent() (*Component, error) {
-	c := &Component{
-		HTTPServer:     &http.Server{ReadHeaderTimeout: 3 * time.Second},
-		errorChan:      make(chan error),
-		ServiceRunning: false,
+func NewRedirectProxyComponent() (c *Component, err error) {
+	c = &Component{
+		HTTPServer: &http.Server{
+			ReadHeaderTimeout: 5 * time.Second,
+		},
+		svcErrors: make(chan error),
 	}
 
-	var err error
+	ctx := context.Background()
 
 	c.Config, err = config.Get()
 	if err != nil {
 		return nil, err
 	}
 
-	initMock := &mock.InitialiserMock{
-		DoGetHealthCheckFunc: c.DoGetHealthcheckOk,
-		DoGetHTTPServerFunc:  c.DoGetHTTPServer,
-	}
+	c.Config.HealthCheckInterval = 1 * time.Second
+	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
 
-	c.svcList = service.NewServiceList(initMock)
-
-	c.apiFeature = componenttest.NewAPIFeature(c.InitialiseService)
+	log.Info(ctx, "configuration for component test", log.Data{"config": c.Config})
 
 	return c, nil
+}
+
+func (c *Component) InitAPIFeature() *componentTest.APIFeature {
+	c.apiFeature = componentTest.NewAPIFeature(c.InitialiseService)
+
+	return c.apiFeature
 }
 
 func (c *Component) Reset() *Component {
@@ -65,7 +75,7 @@ func (c *Component) Close() error {
 
 func (c *Component) InitialiseService() (http.Handler, error) {
 	var err error
-	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
+	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", gitCommitHash, appVersion, c.svcErrors)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +93,12 @@ func (c *Component) DoGetHealthcheckOk(cfg *config.Config, buildTime, gitCommit,
 }
 
 func (c *Component) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
+	c.HTTPServer.Addr = bindAddr
+	c.HTTPServer.Handler = router
+	return c.HTTPServer
+}
+
+func (c *Component) getHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
 	c.HTTPServer.Addr = bindAddr
 	c.HTTPServer.Handler = router
 	return c.HTTPServer

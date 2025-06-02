@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"testing"
 
@@ -19,26 +20,36 @@ type ComponentTest struct {
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	component, err := steps.NewComponent()
+	redirectProxyComponent, err := steps.NewRedirectProxyComponent()
 	if err != nil {
-		panic(err)
+		fmt.Printf("failed to create redirect proxy component - error: %v", err)
+		os.Exit(1)
 	}
 
+	apiFeature := redirectProxyComponent.InitAPIFeature()
+
+	url := fmt.Sprintf("http://%s", redirectProxyComponent.Config.BindAddr)
+	uiFeature := componenttest.NewUIFeature(url)
+	uiFeature.RegisterSteps(ctx)
+
+	apiFeature.RegisterSteps(ctx)
+	redirectProxyComponent.RegisterSteps(ctx)
+
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		component.Reset()
+		uiFeature.Reset()
+		redirectProxyComponent.Reset()
 
 		return ctx, nil
 	})
 
 	ctx.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
-		if closeErr := component.Close(); closeErr != nil {
+		uiFeature.Close()
+		if closeErr := redirectProxyComponent.Close(); closeErr != nil {
 			panic(closeErr)
 		}
 
 		return ctx, nil
 	})
-
-	component.RegisterSteps(ctx)
 }
 
 func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {
