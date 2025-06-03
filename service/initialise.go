@@ -41,6 +41,10 @@ func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitC
 	return hc, nil
 }
 
+func (e *ExternalServiceList) GetRequestMiddleware() RequestMiddleware {
+	return e.Init.DoGetRequestMiddleware()
+}
+
 // DoGetHTTPServer creates an HTTP Server with the provided bind address and router
 func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
 	s := dphttp.NewServer(bindAddr, router)
@@ -56,4 +60,8 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 	}
 	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
 	return &hc, nil
+}
+
+func (e *Init) DoGetRequestMiddleware() RequestMiddleware {
+	return &NoOpRequestMiddleware{}
 }

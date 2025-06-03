@@ -26,6 +26,9 @@ var _ service.Initialiser = &InitialiserMock{}
 //			DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 //				panic("mock out the DoGetHealthCheck method")
 //			},
+//			DoGetRequestMiddlewareFunc: func() service.RequestMiddleware {
+//				panic("mock out the DoGetRequestMiddleware method")
+//			},
 //		}
 //
 //		// use mockedInitialiser in code that requires service.Initialiser
@@ -38,6 +41,9 @@ type InitialiserMock struct {
 
 	// DoGetHealthCheckFunc mocks the DoGetHealthCheck method.
 	DoGetHealthCheckFunc func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error)
+
+	// DoGetRequestMiddlewareFunc mocks the DoGetRequestMiddleware method.
+	DoGetRequestMiddlewareFunc func() service.RequestMiddleware
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -59,9 +65,13 @@ type InitialiserMock struct {
 			// Version is the version argument value.
 			Version string
 		}
+		// DoGetRequestMiddleware holds details about calls to the DoGetRequestMiddleware method.
+		DoGetRequestMiddleware []struct {
+		}
 	}
-	lockDoGetHTTPServer  sync.RWMutex
-	lockDoGetHealthCheck sync.RWMutex
+	lockDoGetHTTPServer        sync.RWMutex
+	lockDoGetHealthCheck       sync.RWMutex
+	lockDoGetRequestMiddleware sync.RWMutex
 }
 
 // DoGetHTTPServer calls DoGetHTTPServerFunc.
@@ -141,5 +151,32 @@ func (mock *InitialiserMock) DoGetHealthCheckCalls() []struct {
 	mock.lockDoGetHealthCheck.RLock()
 	calls = mock.calls.DoGetHealthCheck
 	mock.lockDoGetHealthCheck.RUnlock()
+	return calls
+}
+
+// DoGetRequestMiddleware calls DoGetRequestMiddlewareFunc.
+func (mock *InitialiserMock) DoGetRequestMiddleware() service.RequestMiddleware {
+	if mock.DoGetRequestMiddlewareFunc == nil {
+		panic("InitialiserMock.DoGetRequestMiddlewareFunc: method is nil but Initialiser.DoGetRequestMiddleware was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockDoGetRequestMiddleware.Lock()
+	mock.calls.DoGetRequestMiddleware = append(mock.calls.DoGetRequestMiddleware, callInfo)
+	mock.lockDoGetRequestMiddleware.Unlock()
+	return mock.DoGetRequestMiddlewareFunc()
+}
+
+// DoGetRequestMiddlewareCalls gets all the calls that were made to DoGetRequestMiddleware.
+// Check the length with:
+//
+//	len(mockedInitialiser.DoGetRequestMiddlewareCalls())
+func (mock *InitialiserMock) DoGetRequestMiddlewareCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockDoGetRequestMiddleware.RLock()
+	calls = mock.calls.DoGetRequestMiddleware
+	mock.lockDoGetRequestMiddleware.RUnlock()
 	return calls
 }
