@@ -21,7 +21,7 @@ type ComponentTest struct {
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, ctx)
+	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature)
 	if err != nil {
 		fmt.Printf("failed to create redirect proxy component - error: %v", err)
 		os.Exit(1)
@@ -30,6 +30,7 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	apiFeature := redirectProxyComponent.InitAPIFeature()
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		f.RedisFeature.Reset()
 		apiFeature.Reset()
 		redirectProxyComponent.Reset()
 
@@ -37,15 +38,14 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	})
 
 	ctx.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
-		if closeErr := redirectProxyComponent.Close(); closeErr != nil {
-			panic(closeErr)
-		}
+		f.RedisFeature.Reset()
+		apiFeature.Reset()
 
 		return ctx, nil
 	})
 
 	apiFeature.RegisterSteps(ctx)
-	//f.RedisFeature.RegisterSteps(ctx)
+	f.RedisFeature.RegisterSteps(ctx)
 	redirectProxyComponent.RegisterSteps(ctx)
 }
 

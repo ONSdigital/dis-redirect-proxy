@@ -7,7 +7,6 @@ import (
 	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
 	componentTest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"github.com/cucumber/godog"
 	"net/http"
 	"time"
 )
@@ -24,7 +23,7 @@ type ProxyComponent struct {
 	redisFeature   *componentTest.RedisFeature
 }
 
-func NewProxyComponent(redFeature *componentTest.RedisFeature, ctx *godog.ScenarioContext) (*ProxyComponent, error) {
+func NewProxyComponent(redFeature *componentTest.RedisFeature) (*ProxyComponent, error) {
 
 	c := &ProxyComponent{
 		errorChan:      make(chan error),
@@ -42,7 +41,6 @@ func NewProxyComponent(redFeature *componentTest.RedisFeature, ctx *godog.Scenar
 	}
 
 	c.redisFeature = redFeature
-	c.redisFeature.RegisterSteps(ctx)
 	c.Config.RedisConfig.Address = c.redisFeature.Server.Addr()
 
 	initMock := &mock.InitialiserMock{

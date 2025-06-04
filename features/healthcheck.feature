@@ -4,7 +4,9 @@ Feature: Healthcheck endpoint should inform the health of service
         When I GET "/desserts/jelly"
         Then the HTTP status code should be "404"
 
-#    Scenario: Returning a OK (200) status when health endpoint called
+    Scenario: Returning a OK (200) status when health endpoint called
+        Given redis is healthy
+
 #        Given the redirect proxy is initialised
 #        And redis is healthy
 #        And I run the redirect proxy
