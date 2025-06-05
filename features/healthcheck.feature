@@ -6,6 +6,7 @@ Feature: Healthcheck endpoint should inform the health of service
 
     Scenario: Returning a OK (200) status when health endpoint called
         Given redis is healthy
+        And the redirect proxy is running
 
 #        Given the redirect proxy is initialised
 #        And redis is healthy

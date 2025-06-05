@@ -1,6 +1,9 @@
 package steps
 
-import "github.com/cucumber/godog"
+import (
+	"github.com/cucumber/godog"
+	"github.com/stretchr/testify/assert"
+)
 
 //
 //import (
@@ -26,12 +29,19 @@ import "github.com/cucumber/godog"
 //
 
 func (c *ProxyComponent) RegisterSteps(ctx *godog.ScenarioContext) {
+	ctx.Step(`^the redirect proxy is running$`, c.theRedirectProxyIsRunning)
 	//ctx.Step(`^I should receive a hello-world response$`, c.iShouldReceiveAHelloworldResponse)
 	//ctx.Step(`^redis is healthy$`, c.redisIsHealthy)
 	//ctx.Step(`^the redirect proxy is running$`, c.theRedirectProxyIsRunning)
 	//ctx.Step(`^the redirect proxy is initialised$`, c.theRedirectProxyIsInitialised)
 	//ctx.Step(`^I run the redirect proxy$`, c.iRunTheRedirectProxy)
 	//ctx.Step(`^I should receive the following health JSON response:$`, c.iShouldReceiveTheFollowingHealthJSONResponse)
+}
+
+func (c *ProxyComponent) theRedirectProxyIsRunning() error {
+	assert.Equal(c, true, c.ServiceRunning)
+
+	return c.StepError()
 }
 
 //
