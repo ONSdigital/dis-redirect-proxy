@@ -4,12 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/ONSdigital/log.go/v2/log"
 	"os"
 	"testing"
 
 	"github.com/ONSdigital/dis-redirect-proxy/features/steps"
 	componentTest "github.com/ONSdigital/dp-component-test"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
 )

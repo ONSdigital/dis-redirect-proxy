@@ -19,7 +19,7 @@ Feature: Healthcheck endpoint should inform the health of service
                 "git_commit": "132a3b8570fdfc9098757d841c8c058ddbd1c8fc",
                 "language": "go",
                 "language_version": "go1.24.2",
-                "version": ""
+                "version": "v1.2.3"
               },
               "checks": [
                 {

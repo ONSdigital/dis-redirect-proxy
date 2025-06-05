@@ -3,14 +3,20 @@ package steps
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dis-redirect-proxy/service"
 	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
 	componentTest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"net/http"
-	"strconv"
-	"time"
+)
+
+const (
+	gitCommitHash = "132a3b8570fdfc9098757d841c8c058ddbd1c8fc"
+	appVersion    = "v1.2.3"
 )
 
 type ProxyComponent struct {
@@ -23,6 +29,7 @@ type ProxyComponent struct {
 	ServiceRunning bool
 	apiFeature     *componentTest.APIFeature
 	redisFeature   *componentTest.RedisFeature
+	StartTime      time.Time
 }
 
 func NewProxyComponent(redisFeat *componentTest.RedisFeature) (*ProxyComponent, error) {
@@ -50,6 +57,8 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature) (*ProxyComponent, 
 		DoGetHealthCheckFunc: c.getHealthCheckOK,
 	}
 
+	c.Config.HealthCheckInterval = 1 * time.Second
+	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
 	c.svcList = service.NewServiceList(initMock)
 
 	c.Config.BindAddr = "localhost:0"
@@ -87,18 +96,9 @@ func (c *ProxyComponent) InitialiseService() (http.Handler, error) {
 	return c.HTTPServer.Handler, nil
 }
 
-//func (c *ProxyComponent) DoGetHealthcheckOk(_ *config.Config, _, _, _ string) (service.HealthChecker, error) {
-//	// nolint:revive // param names give context here.
-//	return &mock.HealthCheckerMock{
-//		AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
-//		StartFunc:    func(ctx context.Context) {},
-//		StopFunc:     func() {},
-//	}, nil
-//}
-
 func (c *ProxyComponent) getHealthCheckOK(cfg *config.Config, buildTime, gitCommit, version string) (service.HealthChecker, error) {
-	buildTime = strconv.Itoa(int(time.Now().Unix()))
-	versionInfo, err := healthcheck.NewVersionInfo(buildTime, gitCommit, version)
+	componentBuildTime := strconv.Itoa(int(time.Now().Unix()))
+	versionInfo, err := healthcheck.NewVersionInfo(componentBuildTime, gitCommitHash, appVersion)
 	if err != nil {
 		return nil, err
 	}

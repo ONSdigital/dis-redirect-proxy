@@ -1,41 +1,40 @@
 package steps
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"time"
+
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/cucumber/godog"
 	"github.com/stretchr/testify/assert"
 )
 
-//
-//import (
-//	"context"
-//	"fmt"
-//	"github.com/maxcnunes/httpfake"
-//	"io"
-//	"net/http"
-//	"strconv"
-//	"strings"
-//	"time"
-//
-//	"github.com/ONSdigital/dis-redirect-proxy/config"
-//	"github.com/ONSdigital/dis-redirect-proxy/service"
-//	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
-//	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-//	"github.com/ONSdigital/log.go/v2/log"
-//	"github.com/cucumber/godog"
-//	"github.com/stretchr/testify/assert"
-//)
-//
-//const MsgHealthy = "redis is healthy"
-//
+// HealthCheckTest represents a test healthcheck struct that mimics the real healthcheck struct
+type HealthCheckTest struct {
+	Status    string                  `json:"status"`
+	Version   healthcheck.VersionInfo `json:"version"`
+	Uptime    time.Duration           `json:"uptime"`
+	StartTime time.Time               `json:"start_time"`
+	Checks    []*Check                `json:"checks"`
+}
+
+// Check represents a health status of a registered app that mimics the real check struct
+// As the component test needs to access fields that are not exported in the real struct
+type Check struct {
+	Name        string     `json:"name"`
+	Status      string     `json:"status"`
+	StatusCode  int        `json:"status_code"`
+	Message     string     `json:"message"`
+	LastChecked *time.Time `json:"last_checked"`
+	LastSuccess *time.Time `json:"last_success"`
+	LastFailure *time.Time `json:"last_failure"`
+}
 
 func (c *ProxyComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the redirect proxy is running$`, c.theRedirectProxyIsRunning)
-	//ctx.Step(`^I should receive a hello-world response$`, c.iShouldReceiveAHelloworldResponse)
-	//ctx.Step(`^redis is healthy$`, c.redisIsHealthy)
-	//ctx.Step(`^the redirect proxy is running$`, c.theRedirectProxyIsRunning)
-	//ctx.Step(`^the redirect proxy is initialised$`, c.theRedirectProxyIsInitialised)
-	//ctx.Step(`^I run the redirect proxy$`, c.iRunTheRedirectProxy)
-	//ctx.Step(`^I should receive the following health JSON response:$`, c.iShouldReceiveTheFollowingHealthJSONResponse)
+	ctx.Step(`^I should receive the following health JSON response:$`, c.iShouldReceiveTheFollowingHealthJSONResponse)
 }
 
 func (c *ProxyComponent) theRedirectProxyIsRunning() error {
@@ -44,107 +43,67 @@ func (c *ProxyComponent) theRedirectProxyIsRunning() error {
 	return c.StepError()
 }
 
-//
-//func (c *Component) iShouldReceiveAHelloworldResponse() error {
-//	responseBody := c.apiFeature.HTTPResponse.Body
-//	body, _ := io.ReadAll(responseBody)
-//
-//	assert.Equal(c, `{"message":"Hello, World!"}`, strings.TrimSpace(string(body)))
-//
-//	return c.StepError()
-//}
-//
-//func (c *Component) theRedirectProxyIsRunning() error {
-//	ctx := context.Background()
-//	initFunctions := &mock.InitialiserMock{
-//		DoGetHTTPServerFunc:  c.getHTTPServer,
-//		DoGetHealthCheckFunc: c.getHealthCheckOK,
-//	}
-//
-//	c.svcList = service.NewServiceList(initFunctions)
-//
-//	svcErrors := make(chan error, 1)
-//	c.StartTime = time.Now()
-//	var err error
-//	c.svc, err = service.Run(ctx, c.Config, c.svcList, "1", gitCommitHash, appVersion, svcErrors)
-//	if err != nil {
-//		log.Error(ctx, "failed to init service", err)
-//		return err
-//	}
-//	c.ServiceRunning = true
-//	return nil
-//}
-//
-//func (c *Component) theRedirectProxyIsInitialised() error {
-//	initFunctions := &mock.InitialiserMock{
-//		DoGetHTTPServerFunc:  c.getHTTPServer,
-//		DoGetHealthCheckFunc: c.getHealthCheckOK,
-//	}
-//	c.svcList = service.NewServiceList(initFunctions)
-//	return nil
-//}
-//
-//func (c *Component) iRunTheRedirectProxy() error {
-//	ctx := context.Background()
-//	svcErrors := make(chan error, 1)
-//	c.StartTime = time.Now()
-//	var err error
-//	fmt.Println("here 1")
-//	c.svc, err = service.Run(ctx, c.Config, c.svcList, "1", gitCommitHash, appVersion, svcErrors)
-//	if err != nil {
-//		log.Error(ctx, "failed to run service", err)
-//		return err
-//	}
-//	c.ServiceRunning = true
-//	return nil
-//}
-//
-//func (c *Component) getHealthCheckOK(cfg *config.Config, buildTime, gitCommit, version string) (service.HealthChecker, error) {
-//	componentBuildTime := strconv.Itoa(int(time.Now().Unix()))
-//	versionInfo, err := healthcheck.NewVersionInfo(componentBuildTime, gitCommitHash, appVersion)
-//	if err != nil {
-//		return nil, err
-//	}
-//	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
-//	return &hc, nil
-//}
-//
-//func (c *Component) redisIsHealthy() error {
-//	//redisClientMock := &mock.RedisClientMock{
-//	//	CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-//	//		if state == nil {
-//	//			state = &healthcheck.CheckState{}
-//	//		}
-//	//		if updateErr := state.Update(healthcheck.StatusOK, MsgHealthy, 200); updateErr != nil {
-//	//			return updateErr
-//	//		}
-//	//		return nil
-//	//	},
-//	//}
-//	//
-//	//c.svcList.RedisCli = redisClientMock
-//
-//	c.fakeRedis.healthRequest.Lock()
-//	defer c.fakeRedis.healthRequest.Unlock()
-//
-//	c.fakeRedis.healthRequest.CustomHandle = healthCheckStatusHandle(200)
-//
-//	return nil
-//}
-//
-//func (c *Component) iShouldReceiveTheFollowingHealthJSONResponse(expectedResponse *godog.DocString) error {
-//	responseBody := c.apiFeature.HTTPResponse.Body
-//	body, _ := io.ReadAll(responseBody)
-//
-//	assert.Equal(c, expectedResponse, strings.TrimSpace(string(body)))
-//
-//	return c.StepError()
-//}
-//
-//func healthCheckStatusHandle(status int) httpfake.Responder {
-//	return func(w http.ResponseWriter, r *http.Request, rh *httpfake.Request) {
-//		rh.Lock()
-//		defer rh.Unlock()
-//		w.WriteHeader(status)
-//	}
-//}
+func (c *ProxyComponent) iShouldReceiveTheFollowingHealthJSONResponse(expectedResponse *godog.DocString) error {
+	var healthResponse, expectedHealth HealthCheckTest
+
+	responseBody, err := io.ReadAll(c.apiFeature.HTTPResponse.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response of search controller component - error: %v", err)
+	}
+
+	err = json.Unmarshal(responseBody, &healthResponse)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal response of search controller component - error: %v", err)
+	}
+
+	err = json.Unmarshal([]byte(expectedResponse.Content), &expectedHealth)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal expected health response - error: %v", err)
+	}
+
+	c.validateHealthCheckResponse(healthResponse, expectedHealth)
+
+	return c.ErrorFeature.StepError()
+}
+
+func (c *ProxyComponent) validateHealthCheckResponse(healthResponse, expectedResponse HealthCheckTest) {
+	//maxExpectedStartTime := c.StartTime.Add((c.Config.HealthCheckInterval + 1) * time.Second)
+
+	assert.Equal(&c.ErrorFeature, expectedResponse.Status, healthResponse.Status)
+	assert.True(&c.ErrorFeature, healthResponse.StartTime.After(c.StartTime))
+	//assert.True(&c.ErrorFeature, healthResponse.StartTime.Before(maxExpectedStartTime))
+	//assert.Greater(&c.ErrorFeature, healthResponse.Uptime.Seconds(), float64(0))
+
+	//c.validateHealthVersion(healthResponse.Version, expectedResponse.Version, maxExpectedStartTime)
+
+	//for i, checkResponse := range healthResponse.Checks {
+	//	c.validateHealthCheck(checkResponse, expectedResponse.Checks[i])
+	//}
+}
+
+func (c *ProxyComponent) validateHealthVersion(versionResponse, expectedVersion healthcheck.VersionInfo, maxExpectedStartTime time.Time) {
+	assert.True(&c.ErrorFeature, versionResponse.BuildTime.Before(maxExpectedStartTime))
+	assert.Equal(&c.ErrorFeature, expectedVersion.GitCommit, versionResponse.GitCommit)
+	assert.Equal(&c.ErrorFeature, expectedVersion.Language, versionResponse.Language)
+	assert.NotEmpty(&c.ErrorFeature, versionResponse.LanguageVersion)
+	assert.Equal(&c.ErrorFeature, expectedVersion.Version, versionResponse.Version)
+}
+
+func (c *ProxyComponent) validateHealthCheck(checkResponse, expectedCheck *Check) {
+	maxExpectedHealthCheckTime := c.StartTime.Add((c.Config.HealthCheckInterval + c.Config.HealthCheckCriticalTimeout + 1) * time.Second)
+
+	assert.Equal(&c.ErrorFeature, expectedCheck.Name, checkResponse.Name)
+	assert.Equal(&c.ErrorFeature, expectedCheck.Status, checkResponse.Status)
+	assert.Equal(&c.ErrorFeature, expectedCheck.StatusCode, checkResponse.StatusCode)
+	assert.Equal(&c.ErrorFeature, expectedCheck.Message, checkResponse.Message)
+	assert.True(&c.ErrorFeature, checkResponse.LastChecked.Before(maxExpectedHealthCheckTime))
+	assert.True(&c.ErrorFeature, checkResponse.LastChecked.After(c.StartTime))
+
+	if expectedCheck.StatusCode == 200 {
+		assert.True(&c.ErrorFeature, checkResponse.LastSuccess.Before(maxExpectedHealthCheckTime))
+		assert.True(&c.ErrorFeature, checkResponse.LastSuccess.After(c.StartTime))
+	} else {
+		assert.True(&c.ErrorFeature, checkResponse.LastFailure.Before(maxExpectedHealthCheckTime))
+		assert.True(&c.ErrorFeature, checkResponse.LastFailure.After(c.StartTime))
+	}
+}
