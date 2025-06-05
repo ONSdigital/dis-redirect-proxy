@@ -67,18 +67,18 @@ func (c *ProxyComponent) iShouldReceiveTheFollowingHealthJSONResponse(expectedRe
 }
 
 func (c *ProxyComponent) validateHealthCheckResponse(healthResponse, expectedResponse HealthCheckTest) {
-	//maxExpectedStartTime := c.StartTime.Add((c.Config.HealthCheckInterval + 1) * time.Second)
+	maxExpectedStartTime := c.StartTime.Add((c.Config.HealthCheckInterval + 1) * time.Second)
 
 	assert.Equal(&c.ErrorFeature, expectedResponse.Status, healthResponse.Status)
 	assert.True(&c.ErrorFeature, healthResponse.StartTime.After(c.StartTime))
-	//assert.True(&c.ErrorFeature, healthResponse.StartTime.Before(maxExpectedStartTime))
-	//assert.Greater(&c.ErrorFeature, healthResponse.Uptime.Seconds(), float64(0))
+	assert.True(&c.ErrorFeature, healthResponse.StartTime.Before(maxExpectedStartTime))
+	assert.Greater(&c.ErrorFeature, healthResponse.Uptime.Seconds(), float64(0))
 
-	//c.validateHealthVersion(healthResponse.Version, expectedResponse.Version, maxExpectedStartTime)
+	c.validateHealthVersion(healthResponse.Version, expectedResponse.Version, maxExpectedStartTime)
 
-	//for i, checkResponse := range healthResponse.Checks {
-	//	c.validateHealthCheck(checkResponse, expectedResponse.Checks[i])
-	//}
+	for i, checkResponse := range healthResponse.Checks {
+		c.validateHealthCheck(checkResponse, expectedResponse.Checks[i])
+	}
 }
 
 func (c *ProxyComponent) validateHealthVersion(versionResponse, expectedVersion healthcheck.VersionInfo, maxExpectedStartTime time.Time) {

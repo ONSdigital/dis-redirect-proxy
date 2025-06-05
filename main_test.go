@@ -33,7 +33,6 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		f.RedisFeature.Reset()
 		apiFeature.Reset()
-		//redirectProxyComponent.Reset()
 
 		return ctx, nil
 	})

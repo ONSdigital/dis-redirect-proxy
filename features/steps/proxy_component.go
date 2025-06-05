@@ -62,6 +62,7 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature) (*ProxyComponent, 
 	c.svcList = service.NewServiceList(initMock)
 
 	c.Config.BindAddr = "localhost:0"
+	c.StartTime = time.Now()
 	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
 	if err != nil {
 		return nil, err
