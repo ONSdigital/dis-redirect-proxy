@@ -9,6 +9,7 @@ import (
 	componentTest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -45,8 +46,8 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature) (*ProxyComponent, 
 	c.Config.RedisConfig.Address = c.redisFeature.Server.Addr()
 
 	initMock := &mock.InitialiserMock{
-		DoGetHealthCheckFunc: c.DoGetHealthcheckOk,
 		DoGetHTTPServerFunc:  c.DoGetHTTPServer,
+		DoGetHealthCheckFunc: c.getHealthCheckOK,
 	}
 
 	c.svcList = service.NewServiceList(initMock)
@@ -69,12 +70,6 @@ func (c *ProxyComponent) InitAPIFeature() *componentTest.APIFeature {
 	return c.apiFeature
 }
 
-//func (c *ProxyComponent) Reset() *ProxyComponent {
-//	c.apiFeature.Reset()
-//	c.redisFeature.Reset()
-//	return c
-//}
-
 func (c *ProxyComponent) Close() error {
 	fmt.Println("I'm setting ServiceRunning to false in Close")
 	if c.svc != nil && c.ServiceRunning {
@@ -87,30 +82,28 @@ func (c *ProxyComponent) Close() error {
 	return nil
 }
 
-//func (c *ProxyComponent) InitialiseService() (http.Handler, error) {
-//	c.Config.BindAddr = "localhost:0"
-//	var err error
-//	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
-//	if err != nil {
-//		return nil, err
-//	}
-//	fmt.Println("I'm setting ServiceRunning to true in InitialiseService")
-//	c.ServiceRunning = true
-//	return c.HTTPServer.Handler, nil
-//}
-
 // InitialiseService returns the http.Handler that's contained within a specific ProxyComponent.
 func (c *ProxyComponent) InitialiseService() (http.Handler, error) {
 	return c.HTTPServer.Handler, nil
 }
 
-func (c *ProxyComponent) DoGetHealthcheckOk(_ *config.Config, _, _, _ string) (service.HealthChecker, error) {
-	// nolint:revive // param names give context here.
-	return &mock.HealthCheckerMock{
-		AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
-		StartFunc:    func(ctx context.Context) {},
-		StopFunc:     func() {},
-	}, nil
+//func (c *ProxyComponent) DoGetHealthcheckOk(_ *config.Config, _, _, _ string) (service.HealthChecker, error) {
+//	// nolint:revive // param names give context here.
+//	return &mock.HealthCheckerMock{
+//		AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
+//		StartFunc:    func(ctx context.Context) {},
+//		StopFunc:     func() {},
+//	}, nil
+//}
+
+func (c *ProxyComponent) getHealthCheckOK(cfg *config.Config, buildTime, gitCommit, version string) (service.HealthChecker, error) {
+	buildTime = strconv.Itoa(int(time.Now().Unix()))
+	versionInfo, err := healthcheck.NewVersionInfo(buildTime, gitCommit, version)
+	if err != nil {
+		return nil, err
+	}
+	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
+	return &hc, nil
 }
 
 func (c *ProxyComponent) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
