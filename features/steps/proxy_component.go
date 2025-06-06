@@ -2,7 +2,6 @@ package steps
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,7 +32,6 @@ type ProxyComponent struct {
 }
 
 func NewProxyComponent(redisFeat *componentTest.RedisFeature) (*ProxyComponent, error) {
-	fmt.Println("I'm setting ServiceRunning to false in NewProxyComponent")
 	c := &ProxyComponent{
 		errorChan:      make(chan error),
 		ServiceRunning: false,
@@ -67,21 +65,18 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature) (*ProxyComponent, 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("I'm setting ServiceRunning to true in NewProxyComponent")
 	c.ServiceRunning = true
 
 	return c, nil
 }
 
 func (c *ProxyComponent) InitAPIFeature() *componentTest.APIFeature {
-	fmt.Println("In InitAPIFeature - calling InitialiseService")
 	c.apiFeature = componentTest.NewAPIFeature(c.InitialiseService)
 
 	return c.apiFeature
 }
 
 func (c *ProxyComponent) Close() error {
-	fmt.Println("I'm setting ServiceRunning to false in Close")
 	if c.svc != nil && c.ServiceRunning {
 		c.redisFeature.Server.Close()
 		if err := c.svc.Close(context.Background()); err != nil {
