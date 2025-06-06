@@ -28,7 +28,7 @@ Feature: Healthcheck endpoint should inform the health of service
             }
         """
 
-    Scenario: Returning a WARNING (429) status when can't connect to redis
+    Scenario: Returning a WARNING (429) status when health endpoint called
         Given redis stops running
         And the redirect proxy is running
         And I wait 2 seconds for the healthcheck to be available
@@ -57,8 +57,7 @@ Feature: Healthcheck endpoint should inform the health of service
         """
 
     Scenario: Returning a CRITICAL (500) status when health endpoint called
-        Given redis is healthy
-        And redis stops running
+        Given redis stops running
         And the redirect proxy is running
         And I wait 2 seconds for the healthcheck to be available
         When I GET "/health"
