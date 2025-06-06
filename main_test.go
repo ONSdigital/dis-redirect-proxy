@@ -33,7 +33,6 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	apiFeature := redirectProxyComponent.InitAPIFeature()
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		//f.RedisFeature.Reset()
 		if f.RedisFeature == nil {
 			f.RedisFeature = componentTest.NewRedisFeature()
 		}
@@ -43,10 +42,9 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	})
 
 	ctx.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
-		//f.RedisFeature.Reset()
-		err = f.RedisFeature.Close()
-		if err != nil {
-			log.Error(ctxBackground, "error occurred while closing the RedisFeature", err)
+		closeErr := f.RedisFeature.Close()
+		if closeErr != nil {
+			log.Error(ctxBackground, "error occurred while closing the RedisFeature", closeErr)
 			os.Exit(1)
 		}
 		apiFeature.Reset()
@@ -60,17 +58,9 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 }
 
 func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {
-	//ctxBackground := context.Background()
-
 	ctx.BeforeSuite(func() {
-		//f.RedisFeature = componentTest.NewRedisFeature()
 	})
 	ctx.AfterSuite(func() {
-		//err := f.RedisFeature.Close()
-		//if err != nil {
-		//	log.Error(ctxBackground, "error occurred while closing the RedisFeature", err)
-		//	os.Exit(1)
-		//}
 	})
 }
 
