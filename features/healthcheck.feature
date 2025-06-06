@@ -55,3 +55,34 @@ Feature: Healthcheck endpoint should inform the health of service
                 ]
             }
         """
+
+    Scenario: Returning a CRITICAL (500) status when health endpoint called
+        Given redis is healthy
+        And redis stops running
+        And the redirect proxy is running
+        And I wait 2 seconds for the healthcheck to be available
+        When I GET "/health"
+        And I wait 4 seconds to pass the critical timeout
+        And I GET "/health"
+        Then the HTTP status code should be "500"
+        And the response header "Content-Type" should be "application/json; charset=utf-8"
+        And I should receive the following health JSON response:
+        """
+            {
+                "status": "CRITICAL",
+                "version": {
+                    "git_commit": "132a3b8570fdfc9098757d841c8c058ddbd1c8fc",
+                    "language": "go",
+                    "language_version": "go1.17.8",
+                    "version": "v1.2.3"
+                },
+                "checks": [
+                    {
+                        "name": "Redis",
+                        "status": "CRITICAL",
+                        "status_code": 500,
+                        "message": "couldn't connect to redis"
+                    }
+                ]
+            }
+        """
