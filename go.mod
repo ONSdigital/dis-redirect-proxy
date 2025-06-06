@@ -2,8 +2,6 @@ module github.com/ONSdigital/dis-redirect-proxy
 
 go 1.24.2
 
-replace github.com/ONSdigital/dp-component-test => /Users/cookel/EllasFiles/DpCodeRepos/dp-component-test
-
 require (
 	github.com/ONSdigital/dis-redis v0.1.0
 	github.com/ONSdigital/dp-component-test v0.20.0
