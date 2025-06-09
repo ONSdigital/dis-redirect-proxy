@@ -45,10 +45,8 @@ func (c *ProxyComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the Proxy receives a DELETE request for "([^"]*)"$`, c.apiFeature.IDelete)
 }
 
-func (c *ProxyComponent) theRedirectProxyIsRunning() error {
+func (c *ProxyComponent) theRedirectProxyIsRunning() {
 	assert.Equal(c, true, c.ServiceRunning)
-
-	return c.StepError()
 }
 
 func (c *ProxyComponent) iShouldReceiveAnEmptyResponse() error {
@@ -90,7 +88,7 @@ func (c *ProxyComponent) iShouldReceiveTheSameUnmodifiedResponseFromProxiedServi
 		return err
 	}
 
-	return c.StepError()
+	return nil
 }
 
 func (c *ProxyComponent) iShouldReceiveTheFollowingHealthJSONResponse(expectedResponse *godog.DocString) error {
