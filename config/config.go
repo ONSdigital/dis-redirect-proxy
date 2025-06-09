@@ -20,6 +20,7 @@ type Config struct {
 	OTServiceName              string        `envconfig:"OTEL_SERVICE_NAME"`
 	OtelEnabled                bool          `envconfig:"OTEL_ENABLED"`
 	RedisConfig
+	ProxiedServiceURL string `envconfig:"PROXIED_SERVICE_URL"`
 }
 
 var cfg *Config
@@ -33,6 +34,7 @@ func Get() (*Config, error) {
 
 	cfg = &Config{
 		BindAddr:                   "localhost:30000",
+		ProxiedServiceURL:          "http://localhost:20000",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,

@@ -12,11 +12,13 @@ import (
 //go:generate moq -out mock/server.go -pkg mock . HTTPServer
 //go:generate moq -out mock/healthCheck.go -pkg mock . HealthChecker
 //go:generate moq -out mock/redisClient.go -pkg mock . RedisClient
+//go:generate moq -out mock/requestMiddleware.go -pkg mock . RequestMiddleware
 
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
+	DoGetRequestMiddleware() RequestMiddleware
 }
 
 // HTTPServer defines the required methods from the HTTP server
@@ -36,4 +38,12 @@ type HealthChecker interface {
 // RedisClient defines the required methods for RedisClient
 type RedisClient interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
+}
+
+// RequestMiddleware defines a method to get a middleware function that can modify the request.
+// It is only needed to facilitate testing: the APIFeature in dp-component-test modifies the request to add a fake host
+// and scheme. We need to remove this when running component tests, but don't need to do anything while in production
+// mode. This can be achieved by injecting a middleware function (which will be different in production and test mode).
+type RequestMiddleware interface {
+	GetMiddlewareFunction() func(http.Handler) http.Handler
 }

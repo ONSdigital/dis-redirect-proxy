@@ -4,17 +4,20 @@ import (
 	"context"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
+	"github.com/ONSdigital/dis-redirect-proxy/proxy"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-// Service contains all the configs, server and clients to run the API
+// Service contains all the configs, server and clients to run the proxy
 type Service struct {
 	Config      *config.Config
 	Server      HTTPServer
 	Router      *mux.Router
+	Proxy       *proxy.Proxy
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
 }
@@ -24,17 +27,20 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 	log.Info(ctx, "running service")
 
 	log.Info(ctx, "using service configuration", log.Data{"config": cfg})
-
-	// Get HTTP Server and ... // TODO: Add any middleware that your service requires
 	r := mux.NewRouter()
 
-	if cfg.OtelEnabled {
-		r.Use(otelmux.Middleware(cfg.OTServiceName))
+	var s HTTPServer
 
+	if cfg.OtelEnabled {
+		otelHandler := otelhttp.NewHandler(r, "/")
+		r.Use(otelmux.Middleware(cfg.OTServiceName))
 		// TODO: Any middleware will require 'otelhttp.NewMiddleware(cfg.OTServiceName),' included for Open Telemetry
+		s = serviceList.GetHTTPServer(cfg.BindAddr, otelHandler)
+	} else {
+		s = serviceList.GetHTTPServer(cfg.BindAddr, r)
 	}
 
-	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
+	r.Use(serviceList.Init.DoGetRequestMiddleware().GetMiddlewareFunction())
 
 	// TODO: Add other(s) to serviceList here
 
@@ -59,6 +65,8 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 	}
 
 	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
+	// proxy adds a catch-all route, so any other routes added after that one will never be reachable.
+	p := proxy.Setup(ctx, r, cfg)
 	hc.Start(ctx)
 
 	// Run the http server in a new go-routine
@@ -71,6 +79,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 	return &Service{
 		Config:      cfg,
 		Router:      r,
+		Proxy:       p,
 		HealthCheck: hc,
 		ServiceList: serviceList,
 		Server:      s,

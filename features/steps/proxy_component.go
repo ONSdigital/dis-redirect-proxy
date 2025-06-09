@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
@@ -20,18 +21,19 @@ const (
 
 type ProxyComponent struct {
 	componentTest.ErrorFeature
-	svcList        *service.ExternalServiceList
-	svc            *service.Service
-	errorChan      chan error
-	Config         *config.Config
-	HTTPServer     *http.Server
-	ServiceRunning bool
-	apiFeature     *componentTest.APIFeature
-	redisFeature   *componentTest.RedisFeature
-	StartTime      time.Time
+	svcList               *service.ExternalServiceList
+	svc                   *service.Service
+	errorChan             chan error
+	Config                *config.Config
+	HTTPServer            *http.Server
+	ServiceRunning        bool
+	apiFeature            *componentTest.APIFeature
+	redisFeature          *componentTest.RedisFeature
+	StartTime             time.Time
+	proxiedServiceFeature *ProxiedServiceFeature
 }
 
-func NewProxyComponent(redisFeat *componentTest.RedisFeature) (*ProxyComponent, error) {
+func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat *ProxiedServiceFeature) (*ProxyComponent, error) {
 	c := &ProxyComponent{
 		errorChan:      make(chan error),
 		ServiceRunning: false,
@@ -47,12 +49,17 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature) (*ProxyComponent, 
 		return nil, err
 	}
 
+	//c.proxiedServiceFeature = NewProxiedServiceFeature()
+	c.proxiedServiceFeature = proxiedServiceFeat
+	c.Config.ProxiedServiceURL = c.proxiedServiceFeature.Server.URL
+
 	c.redisFeature = redisFeat
 	c.Config.RedisConfig.Address = c.redisFeature.Server.Addr()
 
 	initMock := &mock.InitialiserMock{
-		DoGetHTTPServerFunc:  c.DoGetHTTPServer,
-		DoGetHealthCheckFunc: c.getHealthCheckOK,
+		DoGetHTTPServerFunc:        c.DoGetHTTPServer,
+		DoGetHealthCheckFunc:       c.getHealthCheckOK,
+		DoGetRequestMiddlewareFunc: c.DoGetRequestMiddleware,
 	}
 
 	c.Config.HealthCheckInterval = 1 * time.Second
@@ -76,9 +83,27 @@ func (c *ProxyComponent) InitAPIFeature() *componentTest.APIFeature {
 	return c.apiFeature
 }
 
+func (c *ProxyComponent) Reset() *ProxyComponent {
+	c.apiFeature.Reset()
+	return c
+}
+
+//func (c *ProxyComponent) Close() error {
+//	if c.svc != nil && c.ServiceRunning {
+//		c.redisFeature.Server.Close()
+//		if err := c.svc.Close(context.Background()); err != nil {
+//			return err
+//		}
+//		c.ServiceRunning = false
+//	}
+//	return nil
+//}
+
 func (c *ProxyComponent) Close() error {
 	if c.svc != nil && c.ServiceRunning {
+		c.proxiedServiceFeature.Server.Close()
 		c.redisFeature.Server.Close()
+		c.svc.Close(context.Background())
 		if err := c.svc.Close(context.Background()); err != nil {
 			return err
 		}
@@ -102,8 +127,39 @@ func (c *ProxyComponent) getHealthCheckOK(cfg *config.Config, buildTime, gitComm
 	return &hc, nil
 }
 
+//func (c *ProxyComponent) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
+//	c.HTTPServer.Addr = bindAddr
+//	c.HTTPServer.Handler = router
+//	return c.HTTPServer
+//}
+
 func (c *ProxyComponent) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
-	c.HTTPServer.Addr = bindAddr
-	c.HTTPServer.Handler = router
+	c.HTTPServer = &http.Server{
+		ReadHeaderTimeout: 3 * time.Second,
+		Addr:              bindAddr,
+		Handler:           router,
+	}
 	return c.HTTPServer
+}
+
+func (c *ProxyComponent) DoGetRequestMiddleware() service.RequestMiddleware {
+	return &HTTPTestRequestMiddleware{}
+}
+
+type HTTPTestRequestMiddleware struct{}
+
+func (rm HTTPTestRequestMiddleware) GetMiddlewareFunction() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// The APIFeature in dp-component-test appends "http://foo" to the request. In production, the scheme and
+			// host are not set. This middleware removes them, so that the request looks like it would in production.
+			r.URL.Scheme = ""
+			r.URL.Host = ""
+
+			requestURI, _ := strings.CutPrefix(r.RequestURI, "http://foo")
+			r.RequestURI = requestURI
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

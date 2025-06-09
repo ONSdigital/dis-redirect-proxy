@@ -16,19 +16,19 @@ var _ service.RedisClient = &RedisClientMock{}
 
 // RedisClientMock is a mock implementation of service.RedisClient.
 //
-//	func TestSomethingThatUsesRedisClient(t *testing.T) {
+// 	func TestSomethingThatUsesRedisClient(t *testing.T) {
 //
-//		// make and configure a mocked service.RedisClient
-//		mockedRedisClient := &RedisClientMock{
-//			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-//				panic("mock out the Checker method")
-//			},
-//		}
+// 		// make and configure a mocked service.RedisClient
+// 		mockedRedisClient := &RedisClientMock{
+// 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+// 				panic("mock out the Checker method")
+// 			},
+// 		}
 //
-//		// use mockedRedisClient in code that requires service.RedisClient
-//		// and then make assertions.
+// 		// use mockedRedisClient in code that requires service.RedisClient
+// 		// and then make assertions.
 //
-//	}
+// 	}
 type RedisClientMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
@@ -66,8 +66,7 @@ func (mock *RedisClientMock) Checker(ctx context.Context, state *healthcheck.Che
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//
-//	len(mockedRedisClient.CheckerCalls())
+//     len(mockedRedisClient.CheckerCalls())
 func (mock *RedisClientMock) CheckerCalls() []struct {
 	Ctx   context.Context
 	State *healthcheck.CheckState

@@ -45,6 +45,10 @@ func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitC
 	return hc, nil
 }
 
+func (e *ExternalServiceList) GetRequestMiddleware() RequestMiddleware {
+	return e.Init.DoGetRequestMiddleware()
+}
+
 // DoGetHTTPServer creates an HTTP Server with the provided bind address and router
 func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
 	s := dphttp.NewServer(bindAddr, router)
@@ -72,4 +76,8 @@ var GetRedisClient = func(ctx context.Context) (RedisClient, error) {
 	}
 
 	return redisClient, nil
+}
+
+func (e *Init) DoGetRequestMiddleware() RequestMiddleware {
+	return &NoOpRequestMiddleware{}
 }

@@ -17,13 +17,15 @@ import (
 var componentFlag = flag.Bool("component", true, "perform component tests")
 
 type ComponentTest struct {
-	RedisFeature *componentTest.RedisFeature
+	RedisFeature          *componentTest.RedisFeature
+	ProxiedServiceFeature *steps.ProxiedServiceFeature
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	ctxBackground := context.Background()
 	f.RedisFeature = componentTest.NewRedisFeature()
-	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature)
+	f.ProxiedServiceFeature = steps.NewProxiedServiceFeature()
+	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, f.ProxiedServiceFeature)
 	if err != nil {
 		fmt.Printf("failed to create redirect proxy component - error: %v", err)
 		os.Exit(1)
@@ -52,6 +54,7 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 
 	apiFeature.RegisterSteps(ctx)
 	f.RedisFeature.RegisterSteps(ctx)
+	f.ProxiedServiceFeature.RegisterSteps(ctx)
 	redirectProxyComponent.RegisterSteps(ctx)
 }
 
