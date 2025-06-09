@@ -74,7 +74,6 @@ linters:
     - nakedret
     - staticcheck
     - stylecheck
-    - typecheck
     - unconvert
     - unused
     - whitespace

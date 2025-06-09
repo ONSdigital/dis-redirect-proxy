@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"fmt"
+	"github.com/ONSdigital/dis-redirect-proxy/service"
 	"net/http"
 	"sync"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
-	"github.com/ONSdigital/dis-redirect-proxy/service"
 	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
 
 	"github.com/pkg/errors"
@@ -25,6 +25,7 @@ var (
 	testVersion    = "Version"
 	errServer      = errors.New("HTTP Server error")
 	errHealthcheck = errors.New("healthCheck error")
+	errRedis       = errors.New("Redis error")
 )
 
 var funcDoGetHealthcheckErr = func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
@@ -33,6 +34,10 @@ var funcDoGetHealthcheckErr = func(cfg *config.Config, buildTime string, gitComm
 
 var funcDoGetHTTPServerNil = func(bindAddr string, router http.Handler) service.HTTPServer {
 	return nil
+}
+
+var funcDoGetRedisClientErr = func(ctx context.Context, cfg config.RedisConfig) (service.RedisClient, error) {
+	return nil, errRedis
 }
 
 func TestRun(t *testing.T) {

@@ -1,8 +1,9 @@
-package proxy
+package service
 
 import (
 	"context"
 	"fmt"
+	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,7 +18,8 @@ func TestSetup(t *testing.T) {
 		ctx := context.Background()
 		r := mux.NewRouter()
 		cfg := &config.Config{}
-		legacyCacheProxy := Setup(ctx, r, cfg)
+		redisCli := &mock.RedisClientMock{}
+		legacyCacheProxy := Setup(ctx, r, cfg, redisCli)
 
 		Convey("When created, all HTTP methods should be accepted", func() {
 			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodGet), ShouldBeTrue)
@@ -48,8 +50,8 @@ func TestProxyHandleRequestOK(t *testing.T) {
 		ctx := context.Background()
 		router := mux.NewRouter()
 		cfg := &config.Config{ProxiedServiceURL: mockTargetServer.URL}
-
-		proxy := Setup(ctx, router, cfg)
+		redisCli := &mock.RedisClientMock{}
+		proxy := Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
@@ -73,7 +75,8 @@ func TestProxyHandleRequestError(t *testing.T) {
 		ctx := context.Background()
 		router := mux.NewRouter()
 		cfg := &config.Config{ProxiedServiceURL: "http://invalid-url"}
-		proxy := Setup(ctx, router, cfg)
+		redisCli := &mock.RedisClientMock{}
+		proxy := Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
@@ -102,8 +105,8 @@ func TestProxyHandleCustomHeaderAndBody(t *testing.T) {
 		ctx := context.Background()
 		router := mux.NewRouter()
 		cfg := &config.Config{ProxiedServiceURL: mockTargetServer.URL}
-
-		proxy := Setup(ctx, router, cfg)
+		redisCli := &mock.RedisClientMock{}
+		proxy := Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()

@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
-	"github.com/ONSdigital/dis-redirect-proxy/proxy"
-	disRedis "github.com/ONSdigital/dis-redis"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -18,9 +16,10 @@ type Service struct {
 	Config      *config.Config
 	Server      HTTPServer
 	Router      *mux.Router
-	Proxy       *proxy.Proxy
+	Proxy       *Proxy
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
+	RedisClient RedisClient
 }
 
 // Run the service
@@ -45,6 +44,13 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	// TODO: Add other(s) to serviceList here
 
+	// Get Redis client
+	redisClient, err := serviceList.GetRedisClient(ctx, cfg.RedisConfig)
+	if err != nil {
+		log.Fatal(ctx, "failed to initialise dis-redis", err)
+		return nil, err
+	}
+
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
 
 	if err != nil {
@@ -52,21 +58,13 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		return nil, err
 	}
 
-	clientConfig := &disRedis.ClientConfig{}
-	redisCli, err := disRedis.NewClient(ctx, clientConfig)
-
-	if err != nil {
-		log.Fatal(ctx, "could not create redis client", err)
-		return nil, err
-	}
-
-	if err := registerCheckers(ctx, hc, redisCli); err != nil {
+	if err := registerCheckers(ctx, hc, redisClient); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
 	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
 	// proxy adds a catch-all route, so any other routes added after that one will never be reachable.
-	p := proxy.Setup(ctx, r, cfg)
+	p := Setup(ctx, r, cfg, redisClient)
 	hc.Start(ctx)
 
 	// Run the http server in a new go-routine
@@ -83,6 +81,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		HealthCheck: hc,
 		ServiceList: serviceList,
 		Server:      s,
+		RedisClient: redisClient,
 	}, nil
 }
 
@@ -133,7 +132,7 @@ func (svc *Service) Close(ctx context.Context) error {
 }
 
 func registerCheckers(ctx context.Context,
-	hc HealthChecker, redisCli *disRedis.Client) (err error) {
+	hc HealthChecker, redisCli RedisClient) (err error) {
 	hasErrors := false
 
 	if err = hc.AddCheck("Redis", redisCli.Checker); err != nil {

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -12,12 +13,14 @@ import (
 //go:generate moq -out mock/server.go -pkg mock . HTTPServer
 //go:generate moq -out mock/healthCheck.go -pkg mock . HealthChecker
 //go:generate moq -out mock/requestMiddleware.go -pkg mock . RequestMiddleware
+//go:generate moq -out mock/redisClient.go -pkg mock . RedisClient
 
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
 	DoGetRequestMiddleware() RequestMiddleware
+	DoGetRedisClient(ctx context.Context, cfg config.RedisConfig) (RedisClient, error)
 }
 
 // HTTPServer defines the required methods from the HTTP server
@@ -32,6 +35,15 @@ type HealthChecker interface {
 	Start(ctx context.Context)
 	Stop()
 	AddCheck(name string, checker healthcheck.Checker) (err error)
+}
+
+// RedisClient defines the required methods for RedisClient
+type RedisClient interface {
+	Checker(ctx context.Context, state *healthcheck.CheckState) error
+	GetValue(ctx context.Context, key string) (string, error)
+	GetTotalKeys(ctx context.Context) (int64, error)
+	SetValue(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+	DeleteValue(ctx context.Context, key string) error
 }
 
 // RequestMiddleware defines a method to get a middleware function that can modify the request.
