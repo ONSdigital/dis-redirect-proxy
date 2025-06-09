@@ -49,7 +49,6 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 		return nil, err
 	}
 
-	//c.proxiedServiceFeature = NewProxiedServiceFeature()
 	c.proxiedServiceFeature = proxiedServiceFeat
 	c.Config.ProxiedServiceURL = c.proxiedServiceFeature.Server.URL
 
@@ -88,17 +87,6 @@ func (c *ProxyComponent) Reset() *ProxyComponent {
 	return c
 }
 
-//func (c *ProxyComponent) Close() error {
-//	if c.svc != nil && c.ServiceRunning {
-//		c.redisFeature.Server.Close()
-//		if err := c.svc.Close(context.Background()); err != nil {
-//			return err
-//		}
-//		c.ServiceRunning = false
-//	}
-//	return nil
-//}
-
 func (c *ProxyComponent) Close() error {
 	if c.svc != nil && c.ServiceRunning {
 		c.proxiedServiceFeature.Server.Close()
@@ -126,12 +114,6 @@ func (c *ProxyComponent) getHealthCheckOK(cfg *config.Config, buildTime, gitComm
 	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
 	return &hc, nil
 }
-
-//func (c *ProxyComponent) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
-//	c.HTTPServer.Addr = bindAddr
-//	c.HTTPServer.Handler = router
-//	return c.HTTPServer
-//}
 
 func (c *ProxyComponent) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
 	c.HTTPServer = &http.Server{
