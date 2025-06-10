@@ -19,8 +19,8 @@ type Config struct {
 	OTExporterOTLPEndpoint     string        `envconfig:"OTEL_EXPORTER_OTLP_ENDPOINT"`
 	OTServiceName              string        `envconfig:"OTEL_SERVICE_NAME"`
 	OtelEnabled                bool          `envconfig:"OTEL_ENABLED"`
-	RedisConfig
-	ProxiedServiceURL string `envconfig:"PROXIED_SERVICE_URL"`
+	RedisAddress               string        `envconfig:"REDIS_ADDRESS"`
+	ProxiedServiceURL          string        `envconfig:"PROXIED_SERVICE_URL"`
 }
 
 var cfg *Config
@@ -42,9 +42,7 @@ func Get() (*Config, error) {
 		OTExporterOTLPEndpoint:     "localhost:4317",
 		OTServiceName:              "dis-redirect-proxy",
 		OtelEnabled:                false,
-		RedisConfig: RedisConfig{
-			Address: "",
-		},
+		RedisAddress:               "",
 	}
 
 	return cfg, envconfig.Process("", cfg)

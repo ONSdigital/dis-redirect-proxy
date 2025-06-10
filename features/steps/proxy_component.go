@@ -53,7 +53,7 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 	c.Config.ProxiedServiceURL = c.proxiedServiceFeature.Server.URL
 
 	c.redisFeature = redisFeat
-	c.Config.RedisConfig.Address = c.redisFeature.Server.Addr()
+	c.Config.RedisAddress = c.redisFeature.Server.Addr()
 
 	initMock := &mock.InitialiserMock{
 		DoGetHTTPServerFunc:        c.DoGetHTTPServer,
