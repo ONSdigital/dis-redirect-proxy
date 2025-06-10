@@ -32,6 +32,7 @@ func TestConfig(t *testing.T) {
 					OTExporterOTLPEndpoint:     "localhost:4317",
 					OTServiceName:              "dis-redirect-proxy",
 					OtelEnabled:                false,
+					RedisAddress:               "localhost:6379",
 				})
 			})
 
