@@ -3,46 +3,66 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/ONSdigital/dis-redirect-proxy/features/steps"
-	componenttest "github.com/ONSdigital/dp-component-test"
+	componentTest "github.com/ONSdigital/dp-component-test"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
 )
 
-var componentFlag = flag.Bool("component", false, "perform component tests")
+var componentFlag = flag.Bool("component", true, "perform component tests")
 
 type ComponentTest struct {
-	MongoFeature *componenttest.MongoFeature
+	RedisFeature          *componentTest.RedisFeature
+	ProxiedServiceFeature *steps.ProxiedServiceFeature
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	component, err := steps.NewComponent()
+	ctxBackground := context.Background()
+	f.RedisFeature = componentTest.NewRedisFeature()
+	f.ProxiedServiceFeature = steps.NewProxiedServiceFeature()
+	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, f.ProxiedServiceFeature)
 	if err != nil {
-		panic(err)
+		fmt.Printf("failed to create redirect proxy component - error: %v", err)
+		os.Exit(1)
 	}
+	apiFeature := redirectProxyComponent.InitAPIFeature()
 
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		component.Reset()
+		if f.RedisFeature == nil {
+			f.RedisFeature = componentTest.NewRedisFeature()
+		}
+		apiFeature.Reset()
 
 		return ctx, nil
 	})
 
 	ctx.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
-		if closeErr := component.Close(); closeErr != nil {
-			panic(closeErr)
+		closeErr := f.RedisFeature.Close()
+		if closeErr != nil {
+			log.Error(ctxBackground, "error occurred while closing the RedisFeature", closeErr)
+			os.Exit(1)
 		}
+		apiFeature.Reset()
 
 		return ctx, nil
 	})
 
-	component.RegisterSteps(ctx)
+	apiFeature.RegisterSteps(ctx)
+	f.RedisFeature.RegisterSteps(ctx)
+	f.ProxiedServiceFeature.RegisterSteps(ctx)
+	redirectProxyComponent.RegisterSteps(ctx)
 }
 
 func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {
-
+	ctx.BeforeSuite(func() {
+	})
+	ctx.AfterSuite(func() {
+	})
 }
 
 func TestComponent(t *testing.T) {

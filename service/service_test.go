@@ -24,6 +24,7 @@ var (
 	testGitCommit  = "GitCommit"
 	testVersion    = "Version"
 	errServer      = errors.New("HTTP Server error")
+	errRedis       = errors.New("failed to initialise redis")
 	errHealthcheck = errors.New("healthCheck error")
 )
 
@@ -76,6 +77,37 @@ func TestRun(t *testing.T) {
 			return &service.NoOpRequestMiddleware{}
 		}
 
+		redisClientMock := &mock.RedisClientMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+				return nil
+			},
+		}
+		service.GetRedisClient = func(ctx context.Context) (service.RedisClient, error) {
+			return redisClientMock, nil
+		}
+
+		Convey("Given that creating a redis client returns an error", func() {
+			initMock := &mock.InitialiserMock{
+				DoGetHTTPServerFunc:        funcDoGetHTTPServerNil,
+				DoGetHealthCheckFunc:       funcDoGetHealthcheckErr,
+				DoGetRequestMiddlewareFunc: funcDoGetRequestMiddleware,
+			}
+			svcErrors := make(chan error, 1)
+			svcList := service.NewServiceList(initMock)
+			service.GetRedisClient = func(ctx context.Context) (service.RedisClient, error) {
+				return nil, errRedis
+			}
+
+			Convey("Then service Run fails with the same error and no further initialisations are attempted", func() {
+				_, err := service.Run(ctx, cfg, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
+				So(err, ShouldResemble, errRedis)
+
+				Convey("And no checkers are registered ", func() {
+					So(hcMock.AddCheckCalls(), ShouldHaveLength, 0)
+				})
+			})
+		})
+
 		Convey("Given that initialising healthcheck returns an error", func() {
 			// setup (run before each `Convey` at this scope / indentation):
 			initMock := &mock.InitialiserMock{
@@ -97,6 +129,23 @@ func TestRun(t *testing.T) {
 			})
 		})
 
+		Convey("Given that Checkers cannot be registered", func() {
+			initMock := &mock.InitialiserMock{
+				DoGetHTTPServerFunc:        funcDoGetHTTPServer,
+				DoGetHealthCheckFunc:       funcDoGetHealthcheckOk,
+				DoGetRequestMiddlewareFunc: funcDoGetRequestMiddleware,
+			}
+			svcErrors := make(chan error, 1)
+			svcList := service.NewServiceList(initMock)
+			hcMock.AddCheckFunc = func(name string, checker healthcheck.Checker) error { return errHealthcheck }
+
+			Convey("Then service Run fails with the expected error", func() {
+				_, err := service.Run(ctx, cfg, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
+				So(hcMock.AddCheckCalls(), ShouldHaveLength, 1)
+				So(err.Error(), ShouldEqual, "unable to register checkers: Error(s) registering checkers for healthcheck")
+			})
+		})
+
 		Convey("Given that all dependencies are successfully initialised", func() {
 			// setup (run before each `Convey` at this scope / indentation):
 			initMock := &mock.InitialiserMock{
@@ -112,14 +161,15 @@ func TestRun(t *testing.T) {
 			Convey("Then service Run succeeds and all the flags are set", func() {
 				So(err, ShouldBeNil)
 				So(svcList.HealthCheck, ShouldBeTrue)
+				So(svcList.RedisCli, ShouldResemble, redisClientMock)
 			})
 
 			Convey("The checkers are registered and the healthcheck and http server started", func() {
 				So(len(hcMock.AddCheckCalls()), ShouldEqual, 1)
+				So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Redis")
 				So(len(initMock.DoGetHTTPServerCalls()), ShouldEqual, 1)
 				So(initMock.DoGetHTTPServerCalls()[0].BindAddr, ShouldEqual, "localhost:30000")
 				So(len(hcMock.StartCalls()), ShouldEqual, 1)
-				//!!! a call needed to stop the server, maybe ?
 				serverWg.Wait() // Wait for HTTP server go-routine to finish
 				So(len(serverMock.ListenAndServeCalls()), ShouldEqual, 1)
 			})

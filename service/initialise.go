@@ -1,17 +1,21 @@
 package service
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
+	disRedis "github.com/ONSdigital/dis-redis"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/v3/http"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
 type ExternalServiceList struct {
 	HealthCheck bool
 	Init        Initialiser
+	RedisCli    RedisClient
 }
 
 // NewServiceList creates a new service list with the provided initialiser
@@ -31,7 +35,7 @@ func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler
 	return s
 }
 
-// GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
+// GetHealthCheck creates a healthcheck with versionInfo and sets the HealthCheck flag to true
 func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
 	hc, err := e.Init.DoGetHealthCheck(cfg, buildTime, gitCommit, version)
 	if err != nil {
@@ -60,6 +64,18 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 	}
 	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
 	return &hc, nil
+}
+
+var GetRedisClient = func(ctx context.Context) (RedisClient, error) {
+	clientConfig := &disRedis.ClientConfig{}
+	redisClient, err := disRedis.NewClient(ctx, clientConfig)
+
+	if err != nil {
+		log.Error(ctx, "Failed to create dis-redis client", err)
+		return nil, err
+	}
+
+	return redisClient, nil
 }
 
 func (e *Init) DoGetRequestMiddleware() RequestMiddleware {

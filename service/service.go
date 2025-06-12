@@ -5,7 +5,6 @@ import (
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dis-redirect-proxy/proxy"
-	disRedis "github.com/ONSdigital/dis-redis"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -45,6 +44,15 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	// TODO: Add other(s) to serviceList here
 
+	// Get RedisClient client
+	var redisErr error
+	serviceList.RedisCli, redisErr = GetRedisClient(ctx)
+
+	if redisErr != nil {
+		log.Fatal(ctx, "failed to initialise redis", redisErr)
+		return nil, redisErr
+	}
+
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
 
 	if err != nil {
@@ -52,15 +60,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		return nil, err
 	}
 
-	clientConfig := &disRedis.ClientConfig{}
-	redisCli, err := disRedis.NewClient(ctx, clientConfig)
-
-	if err != nil {
-		log.Fatal(ctx, "could not create redis client", err)
-		return nil, err
-	}
-
-	if err := registerCheckers(ctx, hc, redisCli); err != nil {
+	if err := registerCheckers(ctx, hc, serviceList.RedisCli); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -133,7 +133,7 @@ func (svc *Service) Close(ctx context.Context) error {
 }
 
 func registerCheckers(ctx context.Context,
-	hc HealthChecker, redisCli *disRedis.Client) (err error) {
+	hc HealthChecker, redisCli RedisClient) (err error) {
 	hasErrors := false
 
 	if err = hc.AddCheck("Redis", redisCli.Checker); err != nil {
