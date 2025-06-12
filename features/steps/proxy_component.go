@@ -91,7 +91,6 @@ func (c *ProxyComponent) Close() error {
 	if c.svc != nil && c.ServiceRunning {
 		c.proxiedServiceFeature.Server.Close()
 		c.redisFeature.Server.Close()
-		c.svc.Close(context.Background())
 		if err := c.svc.Close(context.Background()); err != nil {
 			return err
 		}

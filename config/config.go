@@ -3,11 +3,8 @@ package config
 import (
 	"time"
 
-	disRedis "github.com/ONSdigital/dis-redis"
 	"github.com/kelseyhightower/envconfig"
 )
-
-type RedisConfig = disRedis.ClientConfig
 
 // Config represents service configuration for dis-redirect-proxy
 type Config struct {
