@@ -14,7 +14,7 @@ import (
 	"github.com/cucumber/godog/colors"
 )
 
-var componentFlag = flag.Bool("component", true, "perform component tests")
+var componentFlag = flag.Bool("component", false, "perform component tests")
 
 type ComponentTest struct {
 	RedisFeature          *componentTest.RedisFeature

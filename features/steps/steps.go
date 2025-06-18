@@ -96,12 +96,12 @@ func (c *ProxyComponent) iShouldReceiveTheFollowingHealthJSONResponse(expectedRe
 
 	responseBody, err := io.ReadAll(c.apiFeature.HTTPResponse.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response of search controller component - error: %v", err)
+		return fmt.Errorf("failed to read response of proxy component - error: %v", err)
 	}
 
 	err = json.Unmarshal(responseBody, &healthResponse)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal response of search controller component - error: %v", err)
+		return fmt.Errorf("failed to unmarshal response of proxy component - error: %v", err)
 	}
 
 	err = json.Unmarshal([]byte(expectedResponse.Content), &expectedHealth)
