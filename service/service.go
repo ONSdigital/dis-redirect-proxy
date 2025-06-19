@@ -46,7 +46,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	// Get RedisClient client
 	var redisErr error
-	serviceList.RedisCli, redisErr = GetRedisClient(ctx)
+	serviceList.RedisCli, redisErr = GetRedisClient(ctx, cfg)
 
 	if redisErr != nil {
 		log.Fatal(ctx, "failed to initialise redis", redisErr)
