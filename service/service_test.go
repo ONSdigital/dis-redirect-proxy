@@ -82,7 +82,7 @@ func TestRun(t *testing.T) {
 				return nil
 			},
 		}
-		service.GetRedisClient = func(ctx context.Context) (service.RedisClient, error) {
+		service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (service.RedisClient, error) {
 			return redisClientMock, nil
 		}
 
@@ -94,7 +94,7 @@ func TestRun(t *testing.T) {
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
-			service.GetRedisClient = func(ctx context.Context) (service.RedisClient, error) {
+			service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (service.RedisClient, error) {
 				return nil, errRedis
 			}
 
