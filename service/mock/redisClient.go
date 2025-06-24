@@ -8,6 +8,7 @@ import (
 	"github.com/ONSdigital/dis-redirect-proxy/service"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"sync"
+	"time"
 )
 
 // Ensure, that RedisClientMock does implement service.RedisClient.
@@ -16,22 +17,46 @@ var _ service.RedisClient = &RedisClientMock{}
 
 // RedisClientMock is a mock implementation of service.RedisClient.
 //
-// 	func TestSomethingThatUsesRedisClient(t *testing.T) {
+//	func TestSomethingThatUsesRedisClient(t *testing.T) {
 //
-// 		// make and configure a mocked service.RedisClient
-// 		mockedRedisClient := &RedisClientMock{
-// 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-// 				panic("mock out the Checker method")
-// 			},
-// 		}
+//		// make and configure a mocked service.RedisClient
+//		mockedRedisClient := &RedisClientMock{
+//			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+//				panic("mock out the Checker method")
+//			},
+//			DeleteValueFunc: func(ctx context.Context, key string) error {
+//				panic("mock out the DeleteValue method")
+//			},
+//			GetTotalKeysFunc: func(ctx context.Context) (int64, error) {
+//				panic("mock out the GetTotalKeys method")
+//			},
+//			GetValueFunc: func(ctx context.Context, key string) (string, error) {
+//				panic("mock out the GetValue method")
+//			},
+//			SetValueFunc: func(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+//				panic("mock out the SetValue method")
+//			},
+//		}
 //
-// 		// use mockedRedisClient in code that requires service.RedisClient
-// 		// and then make assertions.
+//		// use mockedRedisClient in code that requires service.RedisClient
+//		// and then make assertions.
 //
-// 	}
+//	}
 type RedisClientMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
+
+	// DeleteValueFunc mocks the DeleteValue method.
+	DeleteValueFunc func(ctx context.Context, key string) error
+
+	// GetTotalKeysFunc mocks the GetTotalKeys method.
+	GetTotalKeysFunc func(ctx context.Context) (int64, error)
+
+	// GetValueFunc mocks the GetValue method.
+	GetValueFunc func(ctx context.Context, key string) (string, error)
+
+	// SetValueFunc mocks the SetValue method.
+	SetValueFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -42,8 +67,42 @@ type RedisClientMock struct {
 			// State is the state argument value.
 			State *healthcheck.CheckState
 		}
+		// DeleteValue holds details about calls to the DeleteValue method.
+		DeleteValue []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Key is the key argument value.
+			Key string
+		}
+		// GetTotalKeys holds details about calls to the GetTotalKeys method.
+		GetTotalKeys []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+		// GetValue holds details about calls to the GetValue method.
+		GetValue []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Key is the key argument value.
+			Key string
+		}
+		// SetValue holds details about calls to the SetValue method.
+		SetValue []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Key is the key argument value.
+			Key string
+			// Value is the value argument value.
+			Value interface{}
+			// Expiration is the expiration argument value.
+			Expiration time.Duration
+		}
 	}
-	lockChecker sync.RWMutex
+	lockChecker      sync.RWMutex
+	lockDeleteValue  sync.RWMutex
+	lockGetTotalKeys sync.RWMutex
+	lockGetValue     sync.RWMutex
+	lockSetValue     sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -66,7 +125,8 @@ func (mock *RedisClientMock) Checker(ctx context.Context, state *healthcheck.Che
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//     len(mockedRedisClient.CheckerCalls())
+//
+//	len(mockedRedisClient.CheckerCalls())
 func (mock *RedisClientMock) CheckerCalls() []struct {
 	Ctx   context.Context
 	State *healthcheck.CheckState
@@ -78,5 +138,153 @@ func (mock *RedisClientMock) CheckerCalls() []struct {
 	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
 	mock.lockChecker.RUnlock()
+	return calls
+}
+
+// DeleteValue calls DeleteValueFunc.
+func (mock *RedisClientMock) DeleteValue(ctx context.Context, key string) error {
+	if mock.DeleteValueFunc == nil {
+		panic("RedisClientMock.DeleteValueFunc: method is nil but RedisClient.DeleteValue was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Key string
+	}{
+		Ctx: ctx,
+		Key: key,
+	}
+	mock.lockDeleteValue.Lock()
+	mock.calls.DeleteValue = append(mock.calls.DeleteValue, callInfo)
+	mock.lockDeleteValue.Unlock()
+	return mock.DeleteValueFunc(ctx, key)
+}
+
+// DeleteValueCalls gets all the calls that were made to DeleteValue.
+// Check the length with:
+//
+//	len(mockedRedisClient.DeleteValueCalls())
+func (mock *RedisClientMock) DeleteValueCalls() []struct {
+	Ctx context.Context
+	Key string
+} {
+	var calls []struct {
+		Ctx context.Context
+		Key string
+	}
+	mock.lockDeleteValue.RLock()
+	calls = mock.calls.DeleteValue
+	mock.lockDeleteValue.RUnlock()
+	return calls
+}
+
+// GetTotalKeys calls GetTotalKeysFunc.
+func (mock *RedisClientMock) GetTotalKeys(ctx context.Context) (int64, error) {
+	if mock.GetTotalKeysFunc == nil {
+		panic("RedisClientMock.GetTotalKeysFunc: method is nil but RedisClient.GetTotalKeys was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockGetTotalKeys.Lock()
+	mock.calls.GetTotalKeys = append(mock.calls.GetTotalKeys, callInfo)
+	mock.lockGetTotalKeys.Unlock()
+	return mock.GetTotalKeysFunc(ctx)
+}
+
+// GetTotalKeysCalls gets all the calls that were made to GetTotalKeys.
+// Check the length with:
+//
+//	len(mockedRedisClient.GetTotalKeysCalls())
+func (mock *RedisClientMock) GetTotalKeysCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockGetTotalKeys.RLock()
+	calls = mock.calls.GetTotalKeys
+	mock.lockGetTotalKeys.RUnlock()
+	return calls
+}
+
+// GetValue calls GetValueFunc.
+func (mock *RedisClientMock) GetValue(ctx context.Context, key string) (string, error) {
+	if mock.GetValueFunc == nil {
+		panic("RedisClientMock.GetValueFunc: method is nil but RedisClient.GetValue was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Key string
+	}{
+		Ctx: ctx,
+		Key: key,
+	}
+	mock.lockGetValue.Lock()
+	mock.calls.GetValue = append(mock.calls.GetValue, callInfo)
+	mock.lockGetValue.Unlock()
+	return mock.GetValueFunc(ctx, key)
+}
+
+// GetValueCalls gets all the calls that were made to GetValue.
+// Check the length with:
+//
+//	len(mockedRedisClient.GetValueCalls())
+func (mock *RedisClientMock) GetValueCalls() []struct {
+	Ctx context.Context
+	Key string
+} {
+	var calls []struct {
+		Ctx context.Context
+		Key string
+	}
+	mock.lockGetValue.RLock()
+	calls = mock.calls.GetValue
+	mock.lockGetValue.RUnlock()
+	return calls
+}
+
+// SetValue calls SetValueFunc.
+func (mock *RedisClientMock) SetValue(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	if mock.SetValueFunc == nil {
+		panic("RedisClientMock.SetValueFunc: method is nil but RedisClient.SetValue was just called")
+	}
+	callInfo := struct {
+		Ctx        context.Context
+		Key        string
+		Value      interface{}
+		Expiration time.Duration
+	}{
+		Ctx:        ctx,
+		Key:        key,
+		Value:      value,
+		Expiration: expiration,
+	}
+	mock.lockSetValue.Lock()
+	mock.calls.SetValue = append(mock.calls.SetValue, callInfo)
+	mock.lockSetValue.Unlock()
+	return mock.SetValueFunc(ctx, key, value, expiration)
+}
+
+// SetValueCalls gets all the calls that were made to SetValue.
+// Check the length with:
+//
+//	len(mockedRedisClient.SetValueCalls())
+func (mock *RedisClientMock) SetValueCalls() []struct {
+	Ctx        context.Context
+	Key        string
+	Value      interface{}
+	Expiration time.Duration
+} {
+	var calls []struct {
+		Ctx        context.Context
+		Key        string
+		Value      interface{}
+		Expiration time.Duration
+	}
+	mock.lockSetValue.RLock()
+	calls = mock.calls.SetValue
+	mock.lockSetValue.RUnlock()
 	return calls
 }

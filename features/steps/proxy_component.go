@@ -17,6 +17,7 @@ import (
 const (
 	gitCommitHash = "132a3b8570fdfc9098757d841c8c058ddbd1c8fc"
 	appVersion    = "v1.2.3"
+	bindAddress   = "localhost:0"
 )
 
 type ProxyComponent struct {
@@ -33,7 +34,7 @@ type ProxyComponent struct {
 	proxiedServiceFeature *ProxiedServiceFeature
 }
 
-func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat *ProxiedServiceFeature) (*ProxyComponent, error) {
+func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat *ProxiedServiceFeature, cfgOverride *config.Config) (*ProxyComponent, error) {
 	c := &ProxyComponent{
 		errorChan:      make(chan error),
 		ServiceRunning: false,
@@ -43,10 +44,13 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 	}
 
 	var err error
-
-	c.Config, err = config.Get()
-	if err != nil {
-		return nil, err
+	if cfgOverride != nil {
+		c.Config = cfgOverride
+	} else {
+		c.Config, err = config.Get()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	c.proxiedServiceFeature = proxiedServiceFeat
@@ -54,6 +58,9 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 
 	c.redisFeature = redisFeat
 	c.Config.RedisAddress = c.redisFeature.Server.Addr()
+	c.Config.HealthCheckInterval = 1 * time.Second
+	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
+	c.Config.BindAddr = bindAddress
 
 	initMock := &mock.InitialiserMock{
 		DoGetHTTPServerFunc:        c.DoGetHTTPServer,
@@ -61,12 +68,9 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 		DoGetRequestMiddlewareFunc: c.DoGetRequestMiddleware,
 	}
 
-	c.Config.HealthCheckInterval = 1 * time.Second
-	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
 	c.svcList = service.NewServiceList(initMock)
-
-	c.Config.BindAddr = "localhost:0"
 	c.StartTime = time.Now()
+
 	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
 	if err != nil {
 		return nil, err

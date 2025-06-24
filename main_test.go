@@ -9,7 +9,6 @@ import (
 
 	"github.com/ONSdigital/dis-redirect-proxy/features/steps"
 	componentTest "github.com/ONSdigital/dp-component-test"
-	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
 )
@@ -19,43 +18,57 @@ var componentFlag = flag.Bool("component", false, "perform component tests")
 type ComponentTest struct {
 	RedisFeature          *componentTest.RedisFeature
 	ProxiedServiceFeature *steps.ProxiedServiceFeature
+	RedirectProxy         *steps.ProxyComponent
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	ctxBackground := context.Background()
+	// Create shared Redis and mock proxied service
 	f.RedisFeature = componentTest.NewRedisFeature()
 	f.ProxiedServiceFeature = steps.NewProxiedServiceFeature()
-	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, f.ProxiedServiceFeature)
+
+	// Create the redirect proxy component using those dependencies
+	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, f.ProxiedServiceFeature, nil)
 	if err != nil {
 		fmt.Printf("failed to create redirect proxy component - error: %v", err)
 		os.Exit(1)
 	}
-	apiFeature := redirectProxyComponent.InitAPIFeature()
+	f.RedirectProxy = redirectProxyComponent
 
+	// Create and attach API feature from the proxy
+	apiFeature := f.RedirectProxy.InitAPIFeature()
+
+	// Setup Before hook
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		// Ensure Redis is ready
 		if f.RedisFeature == nil {
 			f.RedisFeature = componentTest.NewRedisFeature()
 		}
+
+		// Reset API state (routes, recorded requests, etc.)
 		apiFeature.Reset()
 
 		return ctx, nil
 	})
 
+	// Setup After hook
 	ctx.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
-		closeErr := f.RedisFeature.Close()
-		if closeErr != nil {
-			log.Error(ctxBackground, "error occurred while closing the RedisFeature", closeErr)
-			os.Exit(1)
+		// Gracefully shut down services
+		if f.RedirectProxy != nil {
+			_ = f.RedirectProxy.Close()
 		}
-		apiFeature.Reset()
+		if f.RedisFeature != nil {
+			_ = f.RedisFeature.Close()
+		}
 
+		apiFeature.Reset()
 		return ctx, nil
 	})
 
+	// Register steps from all components
 	apiFeature.RegisterSteps(ctx)
 	f.RedisFeature.RegisterSteps(ctx)
 	f.ProxiedServiceFeature.RegisterSteps(ctx)
-	redirectProxyComponent.RegisterSteps(ctx)
+	f.RedirectProxy.RegisterSteps(ctx)
 }
 
 func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {

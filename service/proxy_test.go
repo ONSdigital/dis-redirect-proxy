@@ -1,0 +1,237 @@
+package service_test
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/ONSdigital/dis-redirect-proxy/config"
+	"github.com/ONSdigital/dis-redirect-proxy/service"
+	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
+	"github.com/gorilla/mux"
+	. "github.com/smartystreets/goconvey/convey"
+)
+
+const nonRedirectURL = "/non-redirect-url"
+
+func TestSetup(t *testing.T) {
+	Convey("Given a Proxy instance", t, func() {
+		ctx := context.Background()
+		r := mux.NewRouter()
+		cfg := &config.Config{}
+		redisClientMock := &mock.RedisClientMock{}
+		legacyCacheProxy := service.ProxySetup(ctx, r, cfg, redisClientMock)
+
+		Convey("When created, all HTTP methods should be accepted", func() {
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodGet), ShouldBeTrue)
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPost), ShouldBeTrue)
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPut), ShouldBeTrue)
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodDelete), ShouldBeTrue)
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodHead), ShouldBeTrue)
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodConnect), ShouldBeTrue)
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodOptions), ShouldBeTrue)
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodTrace), ShouldBeTrue)
+			So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPatch), ShouldBeTrue)
+		})
+	})
+}
+
+func TestProxyHandleRequestWithRedirect(t *testing.T) {
+	Convey("Given a Proxy instance with a mock Redis client", t, func() {
+		// Create a mock Redis client with inline method definition for GetValue
+		redisClientMock := &mock.RedisClientMock{
+			GetValueFunc: func(ctx context.Context, key string) (string, error) {
+				if key == "/old-url" {
+					return "http://localhost:8081/new-url", nil // Simulating a redirect
+				} else if key == nonRedirectURL {
+					return "", nil // Simulating no redirect
+				}
+				return "", nil
+			},
+		}
+
+		// Create a local mock server to simulate the target server for proxying requests
+		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/new-url" {
+				http.Redirect(w, r, "/final-url", http.StatusPermanentRedirect) // Simulate a redirect
+			} else if r.URL.Path == nonRedirectURL {
+				// Return a 200 OK for /non-redirect-url
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("This is the non-redirect URL response"))
+			} else {
+				http.NotFound(w, r) // Simulate a 404 for other paths
+			}
+		}))
+		defer mockServer.Close()
+
+		Convey("When EnableRedisRedirect is true", func() {
+			// Set the ProxiedServiceURL to the mock server's URL
+			cfg := &config.Config{
+				EnableRedisRedirect: true,           // Enable the feature flag to test redirect
+				ProxiedServiceURL:   mockServer.URL, // Set the ProxiedServiceURL to the mock server's URL
+			}
+
+			ctx := context.Background()
+			r := mux.NewRouter()
+			legacyCacheProxy := service.ProxySetup(ctx, r, cfg, redisClientMock)
+
+			Convey("When created, all HTTP methods should be accepted", func() {
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodGet), ShouldBeTrue)
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPost), ShouldBeTrue)
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPut), ShouldBeTrue)
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodDelete), ShouldBeTrue)
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodHead), ShouldBeTrue)
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodConnect), ShouldBeTrue)
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodOptions), ShouldBeTrue)
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodTrace), ShouldBeTrue)
+				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPatch), ShouldBeTrue)
+			})
+
+			Convey("When feature flag is enabled, the redirect middleware should be in place", func() {
+				Convey("When a request triggers a redirect", func() {
+					req, err := http.NewRequest("GET", "/old-url", http.NoBody)
+					So(err, ShouldBeNil)
+					rr := httptest.NewRecorder()
+					legacyCacheProxy.Router.ServeHTTP(rr, req)
+
+					// Assert that a 308 redirect status is returned
+					So(rr.Code, ShouldEqual, http.StatusPermanentRedirect)
+				})
+
+				Convey("When a request does not trigger a redirect", func() {
+					req, err := http.NewRequest("GET", nonRedirectURL, http.NoBody)
+					So(err, ShouldBeNil)
+					rr := httptest.NewRecorder()
+					legacyCacheProxy.Router.ServeHTTP(rr, req)
+
+					// Assert that a normal response (200 OK) is returned
+					So(rr.Code, ShouldEqual, http.StatusOK)
+				})
+			})
+		})
+
+		Convey("When EnableRedisRedirect is false", func() {
+			// Set the ProxiedServiceURL to the mock server's URL
+			cfg := &config.Config{
+				EnableRedisRedirect: false,          // Disable the feature flag to avoid redirect
+				ProxiedServiceURL:   mockServer.URL, // Set the ProxiedServiceURL to the mock server's URL
+			}
+
+			ctx := context.Background()
+			r := mux.NewRouter()
+			legacyCacheProxy := service.ProxySetup(ctx, r, cfg, redisClientMock)
+
+			Convey("When feature flag is disabled, the middleware should forward the request", func() {
+				// Test a request that should not trigger a redirect
+				req, err := http.NewRequest("GET", nonRedirectURL, http.NoBody)
+				So(err, ShouldBeNil)
+				rr := httptest.NewRecorder()
+				legacyCacheProxy.Router.ServeHTTP(rr, req)
+
+				// Assert that a normal response (200 OK) is returned
+				So(rr.Code, ShouldEqual, http.StatusOK)
+			})
+		})
+	})
+}
+
+func TestProxyHandleRequestOK(t *testing.T) {
+	Convey("Given a Proxy and a mock target service", t, func() {
+		mockTargetServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("mock-header", "test")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte("Mock Target Response"))
+			if err != nil {
+				panic(err)
+			}
+		}))
+		defer mockTargetServer.Close()
+
+		ctx := context.Background()
+		router := mux.NewRouter()
+		cfg := &config.Config{
+			EnableRedisRedirect: false,
+			ProxiedServiceURL:   mockTargetServer.URL}
+		redisCli := &mock.RedisClientMock{}
+		proxy := service.ProxySetup(ctx, router, cfg, redisCli)
+
+		Convey("When a request is sent", func() {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/test-endpoint", http.NoBody)
+			proxy.Router.ServeHTTP(w, r)
+
+			Convey("Then the proxy response should match the target response", func() {
+				// Log the response for debugging
+				fmt.Printf("Response Body: %s\n", w.Body.String())
+
+				So(w.Code, ShouldEqual, http.StatusOK)
+				So(w.Body.String(), ShouldEqual, "Mock Target Response")
+				So(w.Header().Get("mock-header"), ShouldEqual, "test")
+			})
+		})
+	})
+}
+
+func TestProxyHandleRequestError(t *testing.T) {
+	Convey("Given a Proxy with an invalid target URL", t, func() {
+		ctx := context.Background()
+		router := mux.NewRouter()
+		cfg := &config.Config{
+			EnableRedisRedirect: false,
+			ProxiedServiceURL:   "http://invalid-url"}
+		redisCli := &mock.RedisClientMock{}
+		proxy := service.ProxySetup(ctx, router, cfg, redisCli)
+
+		Convey("When a request is sent", func() {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/test-endpoint", http.NoBody)
+			proxy.Router.ServeHTTP(w, r)
+
+			Convey("Then the proxy should return a 500 Internal Server Error", func() {
+				So(w.Code, ShouldEqual, http.StatusInternalServerError)
+			})
+		})
+	})
+}
+
+func TestProxyHandleCustomHeaderAndBody(t *testing.T) {
+	Convey("Given a Proxy and a mock target service with custom headers and body", t, func() {
+		mockTargetServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Custom-Header", "HeaderValue")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte("Custom Body Content"))
+			if err != nil {
+				panic(err)
+			}
+		}))
+		defer mockTargetServer.Close()
+
+		ctx := context.Background()
+		router := mux.NewRouter()
+		cfg := &config.Config{
+			EnableRedisRedirect: false,
+			ProxiedServiceURL:   mockTargetServer.URL}
+		redisCli := &mock.RedisClientMock{}
+		proxy := service.ProxySetup(ctx, router, cfg, redisCli)
+
+		Convey("When a request is sent", func() {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/test-endpoint", http.NoBody)
+			proxy.Router.ServeHTTP(w, r)
+
+			Convey("Then the proxy response should match the target's custom headers and body", func() {
+				So(w.Code, ShouldEqual, http.StatusOK)
+				So(w.Body.String(), ShouldEqual, "Custom Body Content")
+				So(w.Header().Get("Custom-Header"), ShouldEqual, "HeaderValue")
+			})
+		})
+	})
+}
+
+func hasRoute(r *mux.Router, path, method string) bool {
+	req := httptest.NewRequest(method, path, http.NoBody)
+	match := &mux.RouteMatch{}
+	return r.Match(req, match)
+}

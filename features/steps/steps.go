@@ -1,12 +1,16 @@
 package steps
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
 	"time"
 
+	"github.com/ONSdigital/dis-redirect-proxy/config"
+	"github.com/ONSdigital/dis-redirect-proxy/service"
+	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/cucumber/godog"
 	"github.com/stretchr/testify/assert"
@@ -43,10 +47,64 @@ func (c *ProxyComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the Proxy receives a PUT request for "([^"]*)"$`, c.apiFeature.IPut)
 	ctx.Step(`^the Proxy receives a PATCH request for "([^"]*)"$`, c.apiFeature.IPatch)
 	ctx.Step(`^the Proxy receives a DELETE request for "([^"]*)"$`, c.apiFeature.IDelete)
+	ctx.Step(`^the feature flag EnableRedisRedirect is set to "([^"]*)"$`, c.theFeatureFlagEnableRedisRedirectIs)
 }
 
-func (c *ProxyComponent) theRedirectProxyIsRunning() {
-	assert.Equal(c, true, c.ServiceRunning)
+func (c *ProxyComponent) theFeatureFlagEnableRedisRedirectIs(value string) error {
+	boolVal, err := strconv.ParseBool(value)
+	if err != nil {
+		return fmt.Errorf("invalid boolean value for feature flag: %s", value)
+	}
+
+	if c.Config == nil {
+		cfg, err := config.Get()
+		if err != nil {
+			return err
+		}
+		cfg.EnableRedisRedirect = boolVal
+		c.Config = cfg
+	} else {
+		c.Config.EnableRedisRedirect = boolVal
+	}
+
+	return nil
+}
+
+func (c *ProxyComponent) theRedirectProxyIsRunning() error {
+	if c.ServiceRunning {
+		return nil // Already running
+	}
+
+	var err error
+	if c.Config == nil {
+		c.Config, err = config.Get()
+		if err != nil {
+			return err
+		}
+	}
+
+	// Ensure required fields are filled
+	c.Config.ProxiedServiceURL = c.proxiedServiceFeature.Server.URL
+	c.Config.RedisAddress = c.redisFeature.Server.Addr()
+	c.Config.HealthCheckInterval = 1 * time.Second
+	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
+	c.Config.BindAddr = bindAddress
+
+	// Service initialiser mock setup
+	initMock := &mock.InitialiserMock{
+		DoGetHTTPServerFunc:        c.DoGetHTTPServer,
+		DoGetHealthCheckFunc:       c.getHealthCheckOK,
+		DoGetRequestMiddlewareFunc: c.DoGetRequestMiddleware,
+	}
+	c.svcList = service.NewServiceList(initMock)
+
+	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
+	if err != nil {
+		return fmt.Errorf("failed to start redirect proxy: %w", err)
+	}
+
+	c.ServiceRunning = true
+	return nil
 }
 
 func (c *ProxyComponent) iShouldReceiveAnEmptyResponse() error {

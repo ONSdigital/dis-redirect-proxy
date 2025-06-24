@@ -15,19 +15,19 @@ var _ service.RequestMiddleware = &RequestMiddlewareMock{}
 
 // RequestMiddlewareMock is a mock implementation of service.RequestMiddleware.
 //
-// 	func TestSomethingThatUsesRequestMiddleware(t *testing.T) {
+//	func TestSomethingThatUsesRequestMiddleware(t *testing.T) {
 //
-// 		// make and configure a mocked service.RequestMiddleware
-// 		mockedRequestMiddleware := &RequestMiddlewareMock{
-// 			GetMiddlewareFunctionFunc: func() func(http.Handler) http.Handler {
-// 				panic("mock out the GetMiddlewareFunction method")
-// 			},
-// 		}
+//		// make and configure a mocked service.RequestMiddleware
+//		mockedRequestMiddleware := &RequestMiddlewareMock{
+//			GetMiddlewareFunctionFunc: func() func(http.Handler) http.Handler {
+//				panic("mock out the GetMiddlewareFunction method")
+//			},
+//		}
 //
-// 		// use mockedRequestMiddleware in code that requires service.RequestMiddleware
-// 		// and then make assertions.
+//		// use mockedRequestMiddleware in code that requires service.RequestMiddleware
+//		// and then make assertions.
 //
-// 	}
+//	}
 type RequestMiddlewareMock struct {
 	// GetMiddlewareFunctionFunc mocks the GetMiddlewareFunction method.
 	GetMiddlewareFunctionFunc func() func(http.Handler) http.Handler
@@ -56,7 +56,8 @@ func (mock *RequestMiddlewareMock) GetMiddlewareFunction() func(http.Handler) ht
 
 // GetMiddlewareFunctionCalls gets all the calls that were made to GetMiddlewareFunction.
 // Check the length with:
-//     len(mockedRequestMiddleware.GetMiddlewareFunctionCalls())
+//
+//	len(mockedRequestMiddleware.GetMiddlewareFunctionCalls())
 func (mock *RequestMiddlewareMock) GetMiddlewareFunctionCalls() []struct {
 } {
 	var calls []struct {
