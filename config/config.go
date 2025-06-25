@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -44,5 +45,13 @@ func Get() (*Config, error) {
 		RedisAddress:               "localhost:6379",
 	}
 
-	return cfg, envconfig.Process("", cfg)
+	if err := envconfig.Process("", cfg); err != nil {
+		return nil, err
+	}
+
+	if cfg.ProxiedServiceURL == "" {
+		return nil, fmt.Errorf("missing required config: PROXIED_SERVICE_URL")
+	}
+
+	return cfg, nil
 }

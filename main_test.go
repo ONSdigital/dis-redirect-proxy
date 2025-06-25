@@ -27,7 +27,7 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	f.ProxiedServiceFeature = steps.NewProxiedServiceFeature()
 
 	// Create the redirect proxy component using those dependencies
-	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, f.ProxiedServiceFeature, nil)
+	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, f.ProxiedServiceFeature)
 	if err != nil {
 		fmt.Printf("failed to create redirect proxy component - error: %v", err)
 		os.Exit(1)

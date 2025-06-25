@@ -47,6 +47,7 @@ func (c *ProxyComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the Proxy receives a PUT request for "([^"]*)"$`, c.apiFeature.IPut)
 	ctx.Step(`^the Proxy receives a PATCH request for "([^"]*)"$`, c.apiFeature.IPatch)
 	ctx.Step(`^the Proxy receives a DELETE request for "([^"]*)"$`, c.apiFeature.IDelete)
+	ctx.Step(`^the Location should be "([^"]*)"$`, c.theLocationShouldBe)
 	ctx.Step(`^the feature flag EnableRedisRedirect is set to "([^"]*)"$`, c.theFeatureFlagEnableRedisRedirectIs)
 }
 
@@ -67,6 +68,17 @@ func (c *ProxyComponent) theFeatureFlagEnableRedisRedirectIs(value string) error
 		c.Config.EnableRedirects = boolVal
 	}
 
+	return nil
+}
+
+func (c *ProxyComponent) theLocationShouldBe(expected string) error {
+	location := c.apiFeature.HTTPResponse.Header.Get("Location")
+	if location == "" {
+		return fmt.Errorf("location header not set in the response")
+	}
+	if location != expected {
+		return fmt.Errorf("unexpected Location header: got %q, want %q", location, expected)
+	}
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
@@ -77,19 +78,17 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 			r := mux.NewRouter()
 			legacyCacheProxy := service.ProxySetup(ctx, r, cfg, redisClientMock)
 
-			Convey("When created, all HTTP methods should be accepted", func() {
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodGet), ShouldBeTrue)
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPost), ShouldBeTrue)
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPut), ShouldBeTrue)
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodDelete), ShouldBeTrue)
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodHead), ShouldBeTrue)
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodConnect), ShouldBeTrue)
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodOptions), ShouldBeTrue)
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodTrace), ShouldBeTrue)
-				So(hasRoute(legacyCacheProxy.Router, "/", http.MethodPatch), ShouldBeTrue)
+			Convey("It should register routes for all HTTP methods", func() {
+				methods := []string{
+					http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
+					http.MethodHead, http.MethodConnect, http.MethodOptions, http.MethodTrace, http.MethodPatch,
+				}
+				for _, method := range methods {
+					So(hasRoute(legacyCacheProxy.Router, "/", method), ShouldBeTrue)
+				}
 			})
 
-			Convey("When feature flag is enabled, the redirect middleware should be in place", func() {
+			Convey("Then the redirect middleware should be in place", func() {
 				Convey("When a request triggers a redirect", func() {
 					req, err := http.NewRequest("GET", "/old-url", http.NoBody)
 					So(err, ShouldBeNil)
@@ -98,6 +97,16 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 
 					// Assert that a 308 redirect status is returned
 					So(rr.Code, ShouldEqual, http.StatusPermanentRedirect)
+
+					// Extract and parse the Location header
+					location := rr.Header().Get("Location")
+					So(location, ShouldNotBeEmpty)
+
+					parsedURL, err := url.Parse(location)
+					So(err, ShouldBeNil)
+
+					// Assert the final redirect path
+					So(parsedURL.Path, ShouldEqual, "/new-url")
 				})
 
 				Convey("When a request does not trigger a redirect", func() {
@@ -123,7 +132,7 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 			r := mux.NewRouter()
 			legacyCacheProxy := service.ProxySetup(ctx, r, cfg, redisClientMock)
 
-			Convey("When feature flag is disabled, the middleware should forward the request", func() {
+			Convey("Then the middleware should forward the request", func() {
 				// Test a request that should not trigger a redirect
 				req, err := http.NewRequest("GET", nonRedirectURL, http.NoBody)
 				So(err, ShouldBeNil)

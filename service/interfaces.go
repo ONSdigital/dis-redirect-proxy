@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -40,9 +39,6 @@ type HealthChecker interface {
 type RedisClient interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 	GetValue(ctx context.Context, key string) (string, error)
-	GetTotalKeys(ctx context.Context) (int64, error)
-	SetValue(ctx context.Context, key string, value interface{}, expiration time.Duration) error
-	DeleteValue(ctx context.Context, key string) error
 }
 
 // RequestMiddleware defines a method to get a middleware function that can modify the request.

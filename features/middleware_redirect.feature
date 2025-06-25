@@ -12,6 +12,7 @@ Feature: Redirect middleware functionality
       Mock request body
       """
     Then the HTTP status code should be "308"
+    And the Location should be "/new-url"
 
   Scenario: No redirect when Redis contains no redirect URL
     Given redis is healthy

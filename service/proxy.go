@@ -74,7 +74,7 @@ func (proxy *Proxy) manage(ctx context.Context, w http.ResponseWriter, req *http
 	// Get the target URL based on the original request and the configuration
 	targetURL := getTargetURL(req.URL.String(), cfg)
 
-	log.Info(ctx, "Forwarding request to target", log.Data{"target_url": targetURL})
+	log.Info(ctx, "forwarding request to target", log.Data{"target_url": targetURL})
 
 	// Create a new proxy request using the original request's context and body
 	proxyReq, err := http.NewRequestWithContext(ctx, req.Method, targetURL, req.Body)
@@ -120,10 +120,5 @@ func (proxy *Proxy) manage(ctx context.Context, w http.ResponseWriter, req *http
 }
 
 func getTargetURL(requestURL string, cfg *config.Config) string {
-	// Ensure that ProxiedServiceURL contains a valid URL scheme
-	if cfg.ProxiedServiceURL == "" {
-		log.Error(context.Background(), "ProxiedServiceURL is not set", nil)
-		return ""
-	}
 	return cfg.ProxiedServiceURL + requestURL
 }

@@ -34,7 +34,7 @@ type ProxyComponent struct {
 	proxiedServiceFeature *ProxiedServiceFeature
 }
 
-func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat *ProxiedServiceFeature, cfgOverride *config.Config) (*ProxyComponent, error) {
+func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat *ProxiedServiceFeature) (*ProxyComponent, error) {
 	c := &ProxyComponent{
 		errorChan:      make(chan error),
 		ServiceRunning: false,
@@ -44,13 +44,9 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 	}
 
 	var err error
-	if cfgOverride != nil {
-		c.Config = cfgOverride
-	} else {
-		c.Config, err = config.Get()
-		if err != nil {
-			return nil, err
-		}
+	c.Config, err = config.Get()
+	if err != nil {
+		return nil, err
 	}
 
 	c.proxiedServiceFeature = proxiedServiceFeat
