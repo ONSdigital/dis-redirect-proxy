@@ -9,7 +9,7 @@ import (
 // Config represents service configuration for dis-redirect-proxy
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
-	EnableRedisRedirect        bool          `envconfig:"ENABLE_REDIS_REDIRECT"`
+	EnableRedirects            bool          `envconfig:"ENABLE_REDIRECTS"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
@@ -32,7 +32,7 @@ func Get() (*Config, error) {
 
 	cfg = &Config{
 		BindAddr:                   "localhost:30000",
-		EnableRedisRedirect:        false,
+		EnableRedirects:            false,
 		ProxiedServiceURL:          "http://localhost:20000",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,

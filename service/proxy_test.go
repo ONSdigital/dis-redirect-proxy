@@ -69,8 +69,8 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 		Convey("When EnableRedisRedirect is true", func() {
 			// Set the ProxiedServiceURL to the mock server's URL
 			cfg := &config.Config{
-				EnableRedisRedirect: true,           // Enable the feature flag to test redirect
-				ProxiedServiceURL:   mockServer.URL, // Set the ProxiedServiceURL to the mock server's URL
+				EnableRedirects:   true,           // Enable the feature flag to test redirect
+				ProxiedServiceURL: mockServer.URL, // Set the ProxiedServiceURL to the mock server's URL
 			}
 
 			ctx := context.Background()
@@ -115,8 +115,8 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 		Convey("When EnableRedisRedirect is false", func() {
 			// Set the ProxiedServiceURL to the mock server's URL
 			cfg := &config.Config{
-				EnableRedisRedirect: false,          // Disable the feature flag to avoid redirect
-				ProxiedServiceURL:   mockServer.URL, // Set the ProxiedServiceURL to the mock server's URL
+				EnableRedirects:   false,          // Disable the feature flag to avoid redirect
+				ProxiedServiceURL: mockServer.URL, // Set the ProxiedServiceURL to the mock server's URL
 			}
 
 			ctx := context.Background()
@@ -152,8 +152,8 @@ func TestProxyHandleRequestOK(t *testing.T) {
 		ctx := context.Background()
 		router := mux.NewRouter()
 		cfg := &config.Config{
-			EnableRedisRedirect: false,
-			ProxiedServiceURL:   mockTargetServer.URL}
+			EnableRedirects:   false,
+			ProxiedServiceURL: mockTargetServer.URL}
 		redisCli := &mock.RedisClientMock{}
 		proxy := service.ProxySetup(ctx, router, cfg, redisCli)
 
@@ -179,8 +179,8 @@ func TestProxyHandleRequestError(t *testing.T) {
 		ctx := context.Background()
 		router := mux.NewRouter()
 		cfg := &config.Config{
-			EnableRedisRedirect: false,
-			ProxiedServiceURL:   "http://invalid-url"}
+			EnableRedirects:   false,
+			ProxiedServiceURL: "http://invalid-url"}
 		redisCli := &mock.RedisClientMock{}
 		proxy := service.ProxySetup(ctx, router, cfg, redisCli)
 
@@ -211,8 +211,8 @@ func TestProxyHandleCustomHeaderAndBody(t *testing.T) {
 		ctx := context.Background()
 		router := mux.NewRouter()
 		cfg := &config.Config{
-			EnableRedisRedirect: false,
-			ProxiedServiceURL:   mockTargetServer.URL}
+			EnableRedirects:   false,
+			ProxiedServiceURL: mockTargetServer.URL}
 		redisCli := &mock.RedisClientMock{}
 		proxy := service.ProxySetup(ctx, router, cfg, redisCli)
 

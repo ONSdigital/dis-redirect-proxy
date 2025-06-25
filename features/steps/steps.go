@@ -61,10 +61,10 @@ func (c *ProxyComponent) theFeatureFlagEnableRedisRedirectIs(value string) error
 		if err != nil {
 			return err
 		}
-		cfg.EnableRedisRedirect = boolVal
+		cfg.EnableRedirects = boolVal
 		c.Config = cfg
 	} else {
-		c.Config.EnableRedisRedirect = boolVal
+		c.Config.EnableRedirects = boolVal
 	}
 
 	return nil

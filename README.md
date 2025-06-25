@@ -16,7 +16,7 @@ A Go Service to redirect legacy URLs requested by users
 | Environment variable         | Default                  | Description                                                                                                        |
 |------------------------------|--------------------------|--------------------------------------------------------------------------------------------------------------------|
 | BIND_ADDR                    | :30000                   | The host and port to bind to                                                                                       |
-| ENABLE_REDIS_REDIRECT        | false                    | Feature flag to enable middleware redis check for redirects                                                        |
+| ENABLE_REDIRECTS             | false                    | Feature flag to enable middleware redis check for redirects                                                        |
 | GRACEFUL_SHUTDOWN_TIMEOUT    | 5s                       | The graceful shutdown timeout in seconds (`time.Duration` format)                                                  |
 | HEALTHCHECK_INTERVAL         | 30s                      | Time between self-healthchecks (`time.Duration` format)                                                            |
 | HEALTHCHECK_CRITICAL_TIMEOUT | 90s                      | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format) |

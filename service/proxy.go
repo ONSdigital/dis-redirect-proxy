@@ -38,7 +38,7 @@ func (proxy *Proxy) redirectMiddleware(cfg *config.Config, redisCli RedisClient)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			// Only proceed with Redis check if feature flag is enabled
-			if cfg.EnableRedisRedirect {
+			if cfg.EnableRedirects {
 				redirectURL, err := proxy.checkRedirect(req.URL.String(), req.Context(), redisCli)
 				if err == nil && redirectURL != "" {
 					// Redirect with 308 Permanent Redirect
