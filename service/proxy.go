@@ -24,8 +24,11 @@ func ProxySetup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli R
 		RedisClient: redisCli,
 	}
 
-	// Middleware for redirect check
-	r.Use(proxy.redirectMiddleware(cfg, redisCli))
+	// Only create middleware with Redis check if feature flag is enabled
+	if cfg.EnableRedirects {
+		// Middleware for redirect check
+		r.Use(proxy.redirectMiddleware(redisCli))
+	}
 
 	r.PathPrefix("/").Name("Proxy Catch-All").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		proxy.manage(req.Context(), w, req, cfg)
@@ -34,18 +37,21 @@ func ProxySetup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli R
 }
 
 // redirectMiddleware checks Redis for a redirect URL
-func (proxy *Proxy) redirectMiddleware(cfg *config.Config, redisCli RedisClient) mux.MiddlewareFunc {
+func (proxy *Proxy) redirectMiddleware(redisCli RedisClient) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			// Only proceed with Redis check if feature flag is enabled
-			if cfg.EnableRedirects {
-				redirectURL, err := proxy.checkRedirect(req.URL.String(), req.Context(), redisCli)
-				if err == nil && redirectURL != "" {
-					// Redirect with 308 Permanent Redirect
-					http.Redirect(w, req, redirectURL, http.StatusPermanentRedirect)
-					return
-				}
+			redirectURL, err := proxy.checkRedirect(req.URL.String(), req.Context(), redisCli)
+			if err == nil && redirectURL != "" {
+				// Redirect with 308 Permanent Redirect
+				http.Redirect(w, req, redirectURL, http.StatusPermanentRedirect)
+				return
 			}
+
+			// If Redis returns an error (e.g., timeout, unavailable), we do not fail the request.
+			// This is intentional: redirect support is a non-blocking enhancement,
+			// and we prefer to serve the original content (legacy website) via the proxy
+			// rather than return a 5xx to the user.
+			// This ensures the service remains highly available even if Redis is degraded.
 
 			// Proceed to the next handler if no redirect is found or feature flag is off
 			next.ServeHTTP(w, req)

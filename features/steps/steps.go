@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dis-redirect-proxy/service"
 	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -47,53 +46,24 @@ func (c *ProxyComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the Proxy receives a PUT request for "([^"]*)"$`, c.apiFeature.IPut)
 	ctx.Step(`^the Proxy receives a PATCH request for "([^"]*)"$`, c.apiFeature.IPatch)
 	ctx.Step(`^the Proxy receives a DELETE request for "([^"]*)"$`, c.apiFeature.IDelete)
-	ctx.Step(`^the Location should be "([^"]*)"$`, c.theLocationShouldBe)
-	ctx.Step(`^the feature flag EnableRedisRedirect is set to "([^"]*)"$`, c.theFeatureFlagEnableRedisRedirectIs)
+	ctx.Step(`^the feature flag EnableRedirects is set to "([^"]*)"$`, c.theFeatureFlagEnableRedirectsIsSetTo)
 }
 
-func (c *ProxyComponent) theFeatureFlagEnableRedisRedirectIs(value string) error {
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("invalid boolean value for feature flag: %s", value)
-	}
-
+func (c *ProxyComponent) SetEnableRedirects(enabled bool) error {
 	if c.Config == nil {
-		cfg, err := config.Get()
-		if err != nil {
-			return err
-		}
-		cfg.EnableRedirects = boolVal
-		c.Config = cfg
-	} else {
-		c.Config.EnableRedirects = boolVal
+		return fmt.Errorf("config is not initialized")
 	}
 
-	return nil
-}
-
-func (c *ProxyComponent) theLocationShouldBe(expected string) error {
-	location := c.apiFeature.HTTPResponse.Header.Get("Location")
-	if location == "" {
-		return fmt.Errorf("location header not set in the response")
-	}
-	if location != expected {
-		return fmt.Errorf("unexpected Location header: got %q, want %q", location, expected)
-	}
-	return nil
-}
-
-func (c *ProxyComponent) theRedirectProxyIsRunning() error {
+	// Stop current service if running
 	if c.ServiceRunning {
-		return nil // Already running
+		if err := c.svc.Close(context.Background()); err != nil {
+			return fmt.Errorf("failed to stop existing service: %w", err)
+		}
+		c.ServiceRunning = false
 	}
 
-	var err error
-	if c.Config == nil {
-		c.Config, err = config.Get()
-		if err != nil {
-			return err
-		}
-	}
+	// Update the flag
+	c.Config.EnableRedirects = enabled
 
 	// Ensure required fields are filled
 	c.Config.ProxiedServiceURL = c.proxiedServiceFeature.Server.URL
@@ -110,13 +80,32 @@ func (c *ProxyComponent) theRedirectProxyIsRunning() error {
 	}
 	c.svcList = service.NewServiceList(initMock)
 
+	// Restart service with updated config
+	var err error
 	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
 	if err != nil {
-		return fmt.Errorf("failed to start redirect proxy: %w", err)
+		return fmt.Errorf("failed to restart service: %w", err)
+	}
+	c.ServiceRunning = true
+
+	return nil
+}
+
+func (c *ProxyComponent) theFeatureFlagEnableRedirectsIsSetTo(value string) error {
+	enabled, err := strconv.ParseBool(value)
+	if err != nil {
+		return fmt.Errorf("invalid boolean value: %q", value)
 	}
 
-	c.ServiceRunning = true
+	if err := c.SetEnableRedirects(enabled); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (c *ProxyComponent) theRedirectProxyIsRunning() {
+	assert.Equal(c, true, c.ServiceRunning)
 }
 
 func (c *ProxyComponent) iShouldReceiveAnEmptyResponse() error {
