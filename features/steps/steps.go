@@ -170,7 +170,7 @@ func (c *ProxyComponent) iShouldReceiveTheFollowingHealthJSONResponse(expectedRe
 
 	c.validateHealthCheckResponse(healthResponse, expectedHealth)
 
-	return c.ErrorFeature.StepError()
+	return c.StepError()
 }
 
 func (c *ProxyComponent) validateHealthCheckResponse(healthResponse, expectedResponse HealthCheckTest) {

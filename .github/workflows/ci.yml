@@ -50,9 +50,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Run lint checks
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.64.6
+          version: v2.1
 
   dis-redirect-proxy-unit:
     needs: dis-redirect-proxy-setup

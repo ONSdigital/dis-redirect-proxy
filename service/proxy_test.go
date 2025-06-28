@@ -44,25 +44,27 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 		// Create a mock Redis client with inline method definition for GetValue
 		redisClientMock := &mock.RedisClientMock{
 			GetValueFunc: func(ctx context.Context, key string) (string, error) {
-				if key == "/old-url" {
-					return "http://localhost:8081/new-url", nil // Simulating a redirect
-				} else if key == nonRedirectURL {
-					return "", nil // Simulating no redirect
+				switch key {
+				case "/old-url":
+					return "http://localhost:8081/new-url", nil
+				case nonRedirectURL:
+					return "", nil
+				default:
+					return "", nil
 				}
-				return "", nil
 			},
 		}
 
 		// Create a local mock server to simulate the target server for proxying requests
 		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/new-url" {
-				http.Redirect(w, r, "/final-url", http.StatusPermanentRedirect) // Simulate a redirect
-			} else if r.URL.Path == nonRedirectURL {
-				// Return a 200 OK for /non-redirect-url
+			switch r.URL.Path {
+			case "/new-url":
+				http.Redirect(w, r, "/final-url", http.StatusPermanentRedirect)
+			case nonRedirectURL:
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte("This is the non-redirect URL response"))
-			} else {
-				http.NotFound(w, r) // Simulate a 404 for other paths
+			default:
+				http.NotFound(w, r)
 			}
 		}))
 		defer mockServer.Close()
