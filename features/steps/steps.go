@@ -2,9 +2,7 @@ package steps
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"strconv"
 	"time"
 
@@ -38,7 +36,6 @@ type Check struct {
 
 func (c *ProxyComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the redirect proxy is running$`, c.theRedirectProxyIsRunning)
-	ctx.Step(`^I should receive the following health JSON response:$`, c.iShouldReceiveTheFollowingHealthJSONResponse)
 	ctx.Step(`^I should receive an empty response$`, c.iShouldReceiveAnEmptyResponse)
 	ctx.Step(`^the response from the Proxied Service should be returned unmodified by the Proxy$`, c.iShouldReceiveTheSameUnmodifiedResponseFromProxiedService)
 	ctx.Step(`^the Proxy receives a GET request for "([^"]*)"$`, c.apiFeature.IGet)
@@ -148,71 +145,6 @@ func (c *ProxyComponent) iShouldReceiveTheSameUnmodifiedResponseFromProxiedServi
 	}
 
 	return nil
-}
-
-func (c *ProxyComponent) iShouldReceiveTheFollowingHealthJSONResponse(expectedResponse *godog.DocString) error {
-	var healthResponse, expectedHealth HealthCheckTest
-
-	responseBody, err := io.ReadAll(c.apiFeature.HTTPResponse.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response of proxy component - error: %v", err)
-	}
-
-	err = json.Unmarshal(responseBody, &healthResponse)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal response of proxy component - error: %v", err)
-	}
-
-	err = json.Unmarshal([]byte(expectedResponse.Content), &expectedHealth)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal expected health response - error: %v", err)
-	}
-
-	c.validateHealthCheckResponse(healthResponse, expectedHealth)
-
-	return c.StepError()
-}
-
-func (c *ProxyComponent) validateHealthCheckResponse(healthResponse, expectedResponse HealthCheckTest) {
-	maxExpectedStartTime := c.StartTime.Add((c.Config.HealthCheckInterval + 1) * time.Second)
-
-	assert.Equal(&c.ErrorFeature, expectedResponse.Status, healthResponse.Status)
-	assert.True(&c.ErrorFeature, healthResponse.StartTime.After(c.StartTime))
-	assert.True(&c.ErrorFeature, healthResponse.StartTime.Before(maxExpectedStartTime))
-	assert.Greater(&c.ErrorFeature, healthResponse.Uptime.Seconds(), float64(0))
-
-	c.validateHealthVersion(healthResponse.Version, expectedResponse.Version, maxExpectedStartTime)
-
-	for i, checkResponse := range healthResponse.Checks {
-		c.validateHealthCheck(checkResponse, expectedResponse.Checks[i])
-	}
-}
-
-func (c *ProxyComponent) validateHealthVersion(versionResponse, expectedVersion healthcheck.VersionInfo, maxExpectedStartTime time.Time) {
-	assert.True(&c.ErrorFeature, versionResponse.BuildTime.Before(maxExpectedStartTime))
-	assert.Equal(&c.ErrorFeature, expectedVersion.GitCommit, versionResponse.GitCommit)
-	assert.Equal(&c.ErrorFeature, expectedVersion.Language, versionResponse.Language)
-	assert.NotEmpty(&c.ErrorFeature, versionResponse.LanguageVersion)
-	assert.Equal(&c.ErrorFeature, expectedVersion.Version, versionResponse.Version)
-}
-
-func (c *ProxyComponent) validateHealthCheck(checkResponse, expectedCheck *Check) {
-	maxExpectedHealthCheckTime := c.StartTime.Add((c.Config.HealthCheckInterval + c.Config.HealthCheckCriticalTimeout + 1) * time.Second)
-
-	assert.Equal(&c.ErrorFeature, expectedCheck.Name, checkResponse.Name)
-	assert.Equal(&c.ErrorFeature, expectedCheck.Status, checkResponse.Status)
-	assert.Equal(&c.ErrorFeature, expectedCheck.StatusCode, checkResponse.StatusCode)
-	assert.Equal(&c.ErrorFeature, expectedCheck.Message, checkResponse.Message)
-	assert.True(&c.ErrorFeature, checkResponse.LastChecked.Before(maxExpectedHealthCheckTime))
-	assert.True(&c.ErrorFeature, checkResponse.LastChecked.After(c.StartTime))
-
-	if expectedCheck.StatusCode == 200 {
-		assert.True(&c.ErrorFeature, checkResponse.LastSuccess.Before(maxExpectedHealthCheckTime))
-		assert.True(&c.ErrorFeature, checkResponse.LastSuccess.After(c.StartTime))
-	} else {
-		assert.True(&c.ErrorFeature, checkResponse.LastFailure.Before(maxExpectedHealthCheckTime))
-		assert.True(&c.ErrorFeature, checkResponse.LastFailure.After(c.StartTime))
-	}
 }
 
 // shouldEvaluateHeader helps determine which headers should be skipped when comparing the ProxiedService and the Proxy response
