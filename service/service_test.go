@@ -10,6 +10,9 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 
+	clientsMock "github.com/ONSdigital/dis-redirect-proxy/clients/mock"
+
+	"github.com/ONSdigital/dis-redirect-proxy/clients"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dis-redirect-proxy/service"
 	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
@@ -77,12 +80,12 @@ func TestRun(t *testing.T) {
 			return &service.NoOpRequestMiddleware{}
 		}
 
-		redisClientMock := &mock.RedisClientMock{
+		redisClientMock := &clientsMock.RedisClientMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 				return nil
 			},
 		}
-		service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (service.RedisClient, error) {
+		service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (clients.RedisClient, error) {
 			return redisClientMock, nil
 		}
 
@@ -94,7 +97,7 @@ func TestRun(t *testing.T) {
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
-			service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (service.RedisClient, error) {
+			service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (clients.RedisClient, error) {
 				return nil, errRedis
 			}
 

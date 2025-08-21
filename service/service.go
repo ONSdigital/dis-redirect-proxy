@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 
+	"github.com/ONSdigital/dis-redirect-proxy/clients"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
+	"github.com/ONSdigital/dis-redirect-proxy/proxy"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -16,7 +18,7 @@ type Service struct {
 	Config      *config.Config
 	Server      HTTPServer
 	Router      *mux.Router
-	Proxy       *Proxy
+	Proxy       *proxy.Proxy
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
 }
@@ -65,7 +67,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
 	// proxy adds a catch-all route, so any other routes added after that one will never be reachable.
-	p := ProxySetup(ctx, r, cfg, serviceList.RedisCli)
+	p := proxy.Setup(ctx, r, cfg, serviceList.RedisCli)
 	hc.Start(ctx)
 
 	// Run the http server in a new go-routine
@@ -132,7 +134,7 @@ func (svc *Service) Close(ctx context.Context) error {
 }
 
 func registerCheckers(ctx context.Context,
-	hc HealthChecker, redisCli RedisClient) (err error) {
+	hc HealthChecker, redisCli clients.RedisClient) (err error) {
 	hasErrors := false
 
 	if err = hc.AddCheck("Redis", redisCli.Checker); err != nil {
