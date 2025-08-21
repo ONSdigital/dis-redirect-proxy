@@ -166,12 +166,12 @@ func TestProxyHandleRequestOK(t *testing.T) {
 			EnableRedirects:   false,
 			ProxiedServiceURL: mockTargetServer.URL}
 		redisCli := &mock.RedisClientMock{}
-		proxy := proxy.Setup(ctx, router, cfg, redisCli)
+		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/test-endpoint", http.NoBody)
-			proxy.Router.ServeHTTP(w, r)
+			testProxy.Router.ServeHTTP(w, r)
 
 			Convey("Then the proxy response should match the target response", func() {
 				// Log the response for debugging
@@ -193,12 +193,12 @@ func TestProxyHandleRequestError(t *testing.T) {
 			EnableRedirects:   false,
 			ProxiedServiceURL: "http://invalid-url"}
 		redisCli := &mock.RedisClientMock{}
-		proxy := proxy.Setup(ctx, router, cfg, redisCli)
+		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/test-endpoint", http.NoBody)
-			proxy.Router.ServeHTTP(w, r)
+			testProxy.Router.ServeHTTP(w, r)
 
 			Convey("Then the proxy should return a 500 Internal Server Error", func() {
 				So(w.Code, ShouldEqual, http.StatusInternalServerError)
@@ -225,12 +225,12 @@ func TestProxyHandleCustomHeaderAndBody(t *testing.T) {
 			EnableRedirects:   false,
 			ProxiedServiceURL: mockTargetServer.URL}
 		redisCli := &mock.RedisClientMock{}
-		proxy := proxy.Setup(ctx, router, cfg, redisCli)
+		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/test-endpoint", http.NoBody)
-			proxy.Router.ServeHTTP(w, r)
+			testProxy.Router.ServeHTTP(w, r)
 
 			Convey("Then the proxy response should match the target's custom headers and body", func() {
 				So(w.Code, ShouldEqual, http.StatusOK)
