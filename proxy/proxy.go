@@ -1,9 +1,10 @@
-package service
+package proxy
 
 import (
 	"context"
 	"net/http"
 
+	"github.com/ONSdigital/dis-redirect-proxy/clients"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dis-redirect-proxy/response"
 	"github.com/ONSdigital/log.go/v2/log"
@@ -14,11 +15,11 @@ import (
 // Proxy provides a struct to wrap the proxy around
 type Proxy struct {
 	Router      *mux.Router
-	RedisClient RedisClient
+	RedisClient clients.RedisClient
 }
 
 // Setup function sets up the proxy and returns a Proxy
-func ProxySetup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli RedisClient) *Proxy {
+func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli clients.RedisClient) *Proxy {
 	proxy := &Proxy{
 		Router:      r,
 		RedisClient: redisCli,
@@ -37,7 +38,7 @@ func ProxySetup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli R
 }
 
 // redirectMiddleware checks Redis for a redirect URL
-func (proxy *Proxy) redirectMiddleware(redisCli RedisClient) mux.MiddlewareFunc {
+func (proxy *Proxy) redirectMiddleware(redisCli clients.RedisClient) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			redirectURL, err := proxy.checkRedirect(req.URL.String(), req.Context(), redisCli)
@@ -60,7 +61,7 @@ func (proxy *Proxy) redirectMiddleware(redisCli RedisClient) mux.MiddlewareFunc 
 }
 
 // checkRedirect checks if a redirect exists in Redis
-func (proxy *Proxy) checkRedirect(url string, ctx context.Context, redisClient RedisClient) (string, error) {
+func (proxy *Proxy) checkRedirect(url string, ctx context.Context, redisClient clients.RedisClient) (string, error) {
 	// Get the redirect URL from Redis based on the incoming URL
 	redirectURL, err := redisClient.GetValue(ctx, url)
 	if err == redis.Nil {
