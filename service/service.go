@@ -134,7 +134,7 @@ func (svc *Service) Close(ctx context.Context) error {
 }
 
 func registerCheckers(ctx context.Context,
-	hc HealthChecker, redisCli clients.RedisClient) (err error) {
+	hc HealthChecker, redisCli clients.Redis) (err error) {
 	hasErrors := false
 
 	if err = hc.AddCheck("Redis", redisCli.Checker); err != nil {

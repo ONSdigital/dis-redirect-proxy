@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/ONSdigital/dis-redirect-proxy/clients/mock"
+	clientMocks "github.com/ONSdigital/dis-redirect-proxy/clients/mock"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dis-redirect-proxy/proxy"
 	"github.com/gorilla/mux"
@@ -22,7 +22,7 @@ func TestSetup(t *testing.T) {
 		ctx := context.Background()
 		r := mux.NewRouter()
 		cfg := &config.Config{}
-		redisClientMock := &mock.RedisClientMock{}
+		redisClientMock := &clientMocks.RedisMock{}
 		redirectProxy := proxy.Setup(ctx, r, cfg, redisClientMock)
 
 		Convey("When created, all HTTP methods should be accepted", func() {
@@ -42,7 +42,7 @@ func TestSetup(t *testing.T) {
 func TestProxyHandleRequestWithRedirect(t *testing.T) {
 	Convey("Given a Proxy instance with a mock Redis client", t, func() {
 		// Create a mock Redis client with inline method definition for GetValue
-		redisClientMock := &mock.RedisClientMock{
+		redisClientMock := &clientMocks.RedisMock{
 			GetValueFunc: func(ctx context.Context, key string) (string, error) {
 				switch key {
 				case "/old-url":
@@ -165,7 +165,7 @@ func TestProxyHandleRequestOK(t *testing.T) {
 		cfg := &config.Config{
 			EnableRedirects:   false,
 			ProxiedServiceURL: mockTargetServer.URL}
-		redisCli := &mock.RedisClientMock{}
+		redisCli := &clientMocks.RedisMock{}
 		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {
@@ -192,7 +192,7 @@ func TestProxyHandleRequestError(t *testing.T) {
 		cfg := &config.Config{
 			EnableRedirects:   false,
 			ProxiedServiceURL: "http://invalid-url"}
-		redisCli := &mock.RedisClientMock{}
+		redisCli := &clientMocks.RedisMock{}
 		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {
@@ -224,7 +224,7 @@ func TestProxyHandleCustomHeaderAndBody(t *testing.T) {
 		cfg := &config.Config{
 			EnableRedirects:   false,
 			ProxiedServiceURL: mockTargetServer.URL}
-		redisCli := &mock.RedisClientMock{}
+		redisCli := &clientMocks.RedisMock{}
 		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
 
 		Convey("When a request is sent", func() {

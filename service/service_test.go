@@ -80,12 +80,12 @@ func TestRun(t *testing.T) {
 			return &service.NoOpRequestMiddleware{}
 		}
 
-		redisClientMock := &clientsMock.RedisClientMock{
+		redisClientMock := &clientsMock.RedisMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 				return nil
 			},
 		}
-		service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (clients.RedisClient, error) {
+		service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (clients.Redis, error) {
 			return redisClientMock, nil
 		}
 
@@ -97,7 +97,7 @@ func TestRun(t *testing.T) {
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
-			service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (clients.RedisClient, error) {
+			service.GetRedisClient = func(ctx context.Context, cfg *config.Config) (clients.Redis, error) {
 				return nil, errRedis
 			}
 

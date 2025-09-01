@@ -10,16 +10,16 @@ import (
 	"sync"
 )
 
-// Ensure, that RedisClientMock does implement clients.RedisClient.
+// Ensure, that RedisMock does implement clients.Redis.
 // If this is not the case, regenerate this file with moq.
-var _ clients.RedisClient = &RedisClientMock{}
+var _ clients.Redis = &RedisMock{}
 
-// RedisClientMock is a mock implementation of clients.RedisClient.
+// RedisMock is a mock implementation of clients.Redis.
 //
-//	func TestSomethingThatUsesRedisClient(t *testing.T) {
+//	func TestSomethingThatUsesRedis(t *testing.T) {
 //
-//		// make and configure a mocked clients.RedisClient
-//		mockedRedisClient := &RedisClientMock{
+//		// make and configure a mocked clients.Redis
+//		mockedRedis := &RedisMock{
 //			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 //				panic("mock out the Checker method")
 //			},
@@ -28,11 +28,11 @@ var _ clients.RedisClient = &RedisClientMock{}
 //			},
 //		}
 //
-//		// use mockedRedisClient in code that requires clients.RedisClient
+//		// use mockedRedis in code that requires clients.Redis
 //		// and then make assertions.
 //
 //	}
-type RedisClientMock struct {
+type RedisMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
@@ -61,9 +61,9 @@ type RedisClientMock struct {
 }
 
 // Checker calls CheckerFunc.
-func (mock *RedisClientMock) Checker(ctx context.Context, state *healthcheck.CheckState) error {
+func (mock *RedisMock) Checker(ctx context.Context, state *healthcheck.CheckState) error {
 	if mock.CheckerFunc == nil {
-		panic("RedisClientMock.CheckerFunc: method is nil but RedisClient.Checker was just called")
+		panic("RedisMock.CheckerFunc: method is nil but Redis.Checker was just called")
 	}
 	callInfo := struct {
 		Ctx   context.Context
@@ -81,8 +81,8 @@ func (mock *RedisClientMock) Checker(ctx context.Context, state *healthcheck.Che
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
 //
-//	len(mockedRedisClient.CheckerCalls())
-func (mock *RedisClientMock) CheckerCalls() []struct {
+//	len(mockedRedis.CheckerCalls())
+func (mock *RedisMock) CheckerCalls() []struct {
 	Ctx   context.Context
 	State *healthcheck.CheckState
 } {
@@ -97,9 +97,9 @@ func (mock *RedisClientMock) CheckerCalls() []struct {
 }
 
 // GetValue calls GetValueFunc.
-func (mock *RedisClientMock) GetValue(ctx context.Context, key string) (string, error) {
+func (mock *RedisMock) GetValue(ctx context.Context, key string) (string, error) {
 	if mock.GetValueFunc == nil {
-		panic("RedisClientMock.GetValueFunc: method is nil but RedisClient.GetValue was just called")
+		panic("RedisMock.GetValueFunc: method is nil but Redis.GetValue was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -117,8 +117,8 @@ func (mock *RedisClientMock) GetValue(ctx context.Context, key string) (string, 
 // GetValueCalls gets all the calls that were made to GetValue.
 // Check the length with:
 //
-//	len(mockedRedisClient.GetValueCalls())
-func (mock *RedisClientMock) GetValueCalls() []struct {
+//	len(mockedRedis.GetValueCalls())
+func (mock *RedisMock) GetValueCalls() []struct {
 	Ctx context.Context
 	Key string
 } {

@@ -6,10 +6,10 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 )
 
-//go:generate moq -out mock/redisclient.go -pkg mock . RedisClient
+//go:generate moq -out mock/redis.go -pkg mock . Redis
 
-// RedisClient defines the required methods for RedisClient
-type RedisClient interface {
+// Redis defines the required methods for Redis
+type Redis interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 	GetValue(ctx context.Context, key string) (string, error)
 }
