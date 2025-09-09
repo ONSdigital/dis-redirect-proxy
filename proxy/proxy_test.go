@@ -200,8 +200,8 @@ func TestProxyHandleRequestError(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "/test-endpoint", http.NoBody)
 			testProxy.Router.ServeHTTP(w, r)
 
-			Convey("Then the proxy should return a 500 Internal Server Error", func() {
-				So(w.Code, ShouldEqual, http.StatusInternalServerError)
+			Convey("Then the proxy should return a 502 Bad Gateway", func() {
+				So(w.Code, ShouldEqual, http.StatusBadGateway)
 			})
 		})
 	})

@@ -2,7 +2,10 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 
 	"github.com/ONSdigital/dis-redirect-proxy/clients"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
@@ -31,9 +34,11 @@ func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli client
 		r.Use(proxy.redirectMiddleware(redisCli))
 	}
 
-	r.PathPrefix("/").Name("Proxy Catch-All").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		proxy.manage(req.Context(), w, req, cfg)
-	})
+	proxiedUrl, err := url.Parse(cfg.ProxiedServiceURL)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse proxied service url: %w", err)) //TODO handle error
+	}
+	r.PathPrefix("/").Name("Proxy Catch-All").Handler(newReverseProxy(proxiedUrl))
 	return proxy
 }
 
@@ -75,6 +80,12 @@ func (proxy *Proxy) checkRedirect(url string, ctx context.Context, redisClient c
 
 	// Return the found redirect URL
 	return redirectURL, nil
+}
+
+func newReverseProxy(proxiedUrl *url.URL) *httputil.ReverseProxy {
+	reverseProxy := httputil.NewSingleHostReverseProxy(proxiedUrl)
+
+	return reverseProxy
 }
 
 func (proxy *Proxy) manage(ctx context.Context, w http.ResponseWriter, req *http.Request, cfg *config.Config) {
