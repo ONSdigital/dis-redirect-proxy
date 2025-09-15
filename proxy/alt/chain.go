@@ -60,7 +60,6 @@ func (t *responseWriter) Header() http.Header {
 }
 
 func (t *responseWriter) Write(bytes []byte) (int, error) {
-	// TODO initialise body
 	t.body = append(t.body, bytes...)
 	return len(bytes), nil
 }

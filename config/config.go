@@ -20,7 +20,7 @@ type Config struct {
 	OtelEnabled                bool          `envconfig:"OTEL_ENABLED"`
 	RedisAddress               string        `envconfig:"REDIS_ADDRESS"`
 	ProxiedServiceURL          string        `envconfig:"PROXIED_SERVICE_URL"`
-	FailoverProxyServiceURL    string        `envconfig:"FAILOVER_PROXY_SERVICE_URL"` // TODO consider naming
+	WagtailURL                 string        `envconfig:"WAGTAIL_URL"` // TODO consider naming
 }
 
 var cfg *Config
@@ -36,7 +36,7 @@ func Get() (*Config, error) {
 		BindAddr:                   "localhost:30000",
 		EnableRedirects:            false,
 		ProxiedServiceURL:          "http://localhost:20000",
-		FailoverProxyServiceURL:    "http://localhost:20001", // TODO whatever this should be
+		WagtailURL:                 "http://localhost:20001", // TODO whatever this should be
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
