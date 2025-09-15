@@ -1,8 +1,6 @@
 package alt
 
 import (
-	"bytes"
-	"io"
 	"net/http"
 )
 
@@ -78,20 +76,16 @@ func (t *responseWriter) StatusCode() int {
 
 func (alternative *Alternative) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	// TODO slurping in the original rquest's body if there is one.
-	var readBody []byte
-	if r.Body != nil {
-		defer r.Body.Close()
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-		readBody = body
-	}
+	// Split the request's body reader so that it can be read by both handlers
+	splitter := NewReadCloserSplitter(r.Body)
+	bodyReadCloser1 := splitter.NewReadCloser()
+	defer bodyReadCloser1.Close() // TODO not sure we even need to do this, will handlers defer close anyway?
+	bodyReadCloser2 := splitter.NewReadCloser()
+	defer bodyReadCloser2.Close()
 
-	w1 := responseWriter{}
+	w1 := responseWriter{} // TODO don't slurp response body of first request
 	r1 := r.Clone(r.Context())
-	r1.Body = io.NopCloser(bytes.NewBuffer(readBody))
+	r1.Body = bodyReadCloser1
 	alternative.TryHandler.ServeHTTP(&w1, r1)
 
 	if w1.statusCode != alternative.WhenStatusIs {
@@ -104,7 +98,7 @@ func (alternative *Alternative) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	r2 := r.Clone(r.Context())
-	r2.Body = io.NopCloser(bytes.NewBuffer(readBody))
+	r2.Body = bodyReadCloser2
 	alternative.ThenHandler.ServeHTTP(w, r2)
 }
 

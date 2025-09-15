@@ -1,6 +1,7 @@
 package alt
 
 import (
+	"errors"
 	"io"
 )
 
@@ -9,20 +10,25 @@ import (
 type ReadCloserSplitter struct {
 	ReadCloser   io.ReadCloser
 	maxBytesRead int64
-	splits       []*SplitReadCloser
+	splits       map[int]*SplitReadCloser
+	nextId       int
 }
 
 func NewReadCloserSplitter(readCloser io.ReadCloser) *ReadCloserSplitter {
 	return &ReadCloserSplitter{
 		ReadCloser: readCloser,
+		splits:     make(map[int]*SplitReadCloser),
 	}
 }
 
 func (s *ReadCloserSplitter) NewReadCloser() io.ReadCloser {
+	id := s.nextId
 	split := &SplitReadCloser{
+		Id:       id,
 		splitter: s,
 	}
-	s.splits = append(s.splits, split)
+	s.splits[id] = split
+	s.nextId++
 	return split
 }
 
@@ -35,18 +41,28 @@ func (s *ReadCloserSplitter) upstreamRead(toLength int64) error {
 	n, err := s.ReadCloser.Read(buf)
 	if n > 0 {
 		for _, split := range s.splits {
-			split.addUnreadBytes(buf)
+			split.addUnreadBytes(buf[:n])
 		}
 	}
 	if err != nil {
 		for _, split := range s.splits {
 			split.setUpstreamError(err)
 		}
+		return err
 	}
 	return nil
 }
 
+func (s *ReadCloserSplitter) CloseSplit(id int) error {
+	if _, ok := s.splits[id]; !ok {
+		return errors.New("reader already closed")
+	}
+	delete(s.splits, id)
+	return nil
+}
+
 type SplitReadCloser struct {
+	Id            int
 	splitter      *ReadCloserSplitter
 	bytesRead     int64
 	unreadBytes   []*[]byte
@@ -101,6 +117,5 @@ func (s *SplitReadCloser) getUnreadBytes(p []byte) int {
 }
 
 func (s *SplitReadCloser) Close() error {
-	// TODO implement me
-	panic("not implemented")
+	return s.splitter.CloseSplit(s.Id)
 }
