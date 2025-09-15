@@ -40,15 +40,17 @@ func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli client
 	}
 	proxyHandler := newReverseProxy(proxiedUrl)
 
-	fallbackProxiedURL, err := url.Parse(cfg.FailoverProxyServiceURL)
+	wagtailProxy, err := url.Parse(cfg.WagtailURL)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse failover proxied service url: %w", err))
+		panic(fmt.Errorf("failed to parse wagtail proxied service url: %w", err))
 	}
-	failoverProxyHandler := newReverseProxy(fallbackProxiedURL)
+	wagtailProxyHandler := newReverseProxy(wagtailProxy)
 
-	alternativeHandler := alt.Try(proxyHandler).WhenStatus(http.StatusNotFound).Then(failoverProxyHandler)
+	alternativeHandler := alt.Try(wagtailProxyHandler).WhenStatus(http.StatusNotFound).Then(proxyHandler)
+	// TODO  feature flagged
+	r.PathPrefix("/releases/*").Name("Release alternative").Handler(alternativeHandler)
 
-	r.PathPrefix("/").Name("Proxy Catch-All").Handler(alternativeHandler)
+	r.PathPrefix("/").Name("Proxy Catch-All").Handler(proxyHandler)
 	return proxy
 }
 

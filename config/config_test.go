@@ -26,7 +26,7 @@ func TestConfig(t *testing.T) {
 					BindAddr:                   "localhost:30000",
 					EnableRedirects:            false,
 					ProxiedServiceURL:          "http://localhost:20000",
-					FailoverProxyServiceURL:    "http://localhost:20001",
+					WagtailURL:                 "http://localhost:20001",
 					GracefulShutdownTimeout:    5 * time.Second,
 					HealthCheckInterval:        30 * time.Second,
 					HealthCheckCriticalTimeout: 90 * time.Second,
