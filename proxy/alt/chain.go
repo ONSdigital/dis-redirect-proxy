@@ -8,6 +8,9 @@ type try struct {
 	tryHandler http.Handler
 }
 
+// TODO Not sure about this interface for creating new handlers as it might not be idiomatic in Go.
+// Might replace with something like `NewAlternativeHandler(h1,h2,condition)` instead.
+
 // Try wraps a `http.Handler`
 func Try(h http.Handler) *try {
 	return &try{tryHandler: h}

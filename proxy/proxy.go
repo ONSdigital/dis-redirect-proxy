@@ -9,6 +9,7 @@ import (
 
 	"github.com/ONSdigital/dis-redirect-proxy/clients"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
+	"github.com/ONSdigital/dis-redirect-proxy/proxy/alt"
 	"github.com/ONSdigital/dis-redirect-proxy/response"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
@@ -38,7 +39,17 @@ func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli client
 	if err != nil {
 		panic(fmt.Errorf("failed to parse proxied service url: %w", err)) //TODO handle error
 	}
-	r.PathPrefix("/").Name("Proxy Catch-All").Handler(newReverseProxy(proxiedUrl))
+	proxyHandler := newReverseProxy(proxiedUrl)
+
+	fallbackProxiedURL, err := url.Parse(cfg.FailoverProxyServiceURL)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse failover proxied service url: %w", err))
+	}
+	failoverProxyHandler := newReverseProxy(fallbackProxiedURL)
+
+	alternativeHandler := alt.Try(proxyHandler).WhenStatus(http.StatusNotFound).Then(failoverProxyHandler)
+	
+	r.PathPrefix("/").Name("Proxy Catch-All").Handler(alternativeHandler)
 	return proxy
 }
 
