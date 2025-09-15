@@ -12,7 +12,8 @@ func TestNewReadCloserSplitter(t *testing.T) {
 	splitter := NewReadCloserSplitter(byteReadCloser)
 
 	readCloser1 := splitter.NewReadCloser()
-	//_ = splitter.NewReadCloser()
+	readCloser2 := splitter.NewReadCloser()
+	readCloser3 := splitter.NewReadCloser()
 
 	read1 := make([]byte, 3)
 	n, err := readCloser1.Read(read1)
@@ -20,12 +21,56 @@ func TestNewReadCloserSplitter(t *testing.T) {
 		t.Error("Error reading first reader from first readCloser")
 	}
 	if n != 3 {
-		t.Error("Expected 3 bytes read from first readCloser")
+		t.Errorf("Expected 3 bytes read from first readCloser: want %d, got %d", 3, n)
 	}
 	if string(read1) != "moo" {
-		t.Error("First reader did not read expected string")
+		t.Errorf("First reader did not read expected string: want %s, got %s", "moo", string(read1))
 	}
 
+	read2 := make([]byte, 5)
+	n, err = readCloser2.Read(read2)
+	if err != nil {
+		t.Error("Error reading second reader from first readCloser")
+	}
+	if n != 5 {
+		t.Errorf("Expected 5 bytes read from first readCloser:want %d, got %d", 5, n)
+	}
+	if string(read2) != "moo q" {
+		t.Errorf("First reader did not read expected string:want %s, got %s", "moo q", string(read2))
+	}
+
+	err = readCloser2.Close()
+	if err != nil {
+		t.Error("Error closing second readCloser")
+	}
+
+	read1 = make([]byte, 4)
+	n, err = readCloser1.Read(read1)
+	if err != nil {
+		t.Error("Error reading first reader from first readCloser")
+	}
+	if n != 4 {
+		t.Errorf("Expected 4 bytes read from first readCloser: want: %d, got: %d", 4, n)
+	}
+	if string(read1) != " qua" {
+		t.Errorf("First reader did not read expected string: want: %s, got: %s", " qua", string(read1))
+	}
+
+	remaining1, err := io.ReadAll(readCloser1)
+	if err != nil {
+		t.Error("Error reading remainder from first readCloser")
+	}
+	if string(remaining1) != "ck plop" {
+		t.Errorf("First reader did not read expected remaining string: want %q, got %q", "ck plop", string(remaining1))
+	}
+
+	remaining3, err := io.ReadAll(readCloser3)
+	if err != nil {
+		t.Error("Error reading remainder from first readCloser")
+	}
+	if string(remaining3) != "moo quack plop" {
+		t.Errorf("Third reader did not read expected remaining string: want %q, got %q", "moo quack plop", string(remaining1))
+	}
 }
 
 func TestSplitReadCloser_getUnreadBytes(t *testing.T) {
