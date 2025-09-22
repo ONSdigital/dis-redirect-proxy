@@ -10,23 +10,21 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-jobs:
-  dis-redirect-proxy-setup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.24.2'
+# Single source of truth for tool versions
+env:
+  GO_VERSION: '1.25'
 
+jobs:
   dis-redirect-proxy-audit:
-    needs: dis-redirect-proxy-setup
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
       - name: Generate Go Module List
         run:  go list -json -m all > go.list
       - name: Run audit check with Nancy
@@ -35,39 +33,55 @@ jobs:
           nancyVersion: "v1.0.48"
 
   dis-redirect-proxy-build:
-    needs: dis-redirect-proxy-setup
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
       - name: Run build test
         run: make build
 
   dis-redirect-proxy-lint:
-    needs: dis-redirect-proxy-setup
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
       - name: Run lint checks
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.1
 
   dis-redirect-proxy-unit:
-    needs: dis-redirect-proxy-setup
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
       - name: Run unit tests
         run: make test
 
   dis-redirect-proxy-component:
-    needs: dis-redirect-proxy-setup
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
       - name: Run component tests
         run: make test-component
