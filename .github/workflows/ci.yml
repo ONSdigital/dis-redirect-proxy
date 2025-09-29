@@ -12,7 +12,7 @@ concurrency:
 
 # Single source of truth for tool versions
 env:
-  GO_VERSION: '1.25'
+  GO_VERSION: '1.24.7'
 
 jobs:
   dis-redirect-proxy-audit:
@@ -25,12 +25,10 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: Generate Go Module List
-        run:  go list -json -m all > go.list
-      - name: Run audit check with Nancy
-        uses: sonatype-nexus-community/nancy-github-action@main
-        with:
-          nancyVersion: "v1.0.48"
+      - name: Install dis-vulncheck
+        run: go install github.com/ONSdigital/dis-vulncheck@latest
+      - name: Run dis-vulncheck
+        run: make audit
 
   dis-redirect-proxy-build:
     runs-on: ubuntu-latest
