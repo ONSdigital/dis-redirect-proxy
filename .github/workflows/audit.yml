@@ -1,0 +1,42 @@
+name: Audit
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: 0 0 */14 * *
+  workflow_dispatch:
+
+# Single source of truth for tool versions
+env:
+  GO_VERSION: '1.24.9'
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+
+jobs:
+  dis-redirect-proxy-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Install dis-vulncheck
+        run: go install github.com/ONSdigital/dis-vulncheck@latest
+      - name: Run dis-vulncheck
+        run: make audit
+      - name: Slack notification on failure
+        # Only notify failures for periodic runs on main branch
+        if: failure() && env.BRANCH_NAME == 'main'
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          channel-id: ci-failures
+          payload: |
+            {
+              "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|audit test ${{ github.run_id }}> failed for <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}> branch `${{ env.BRANCH_NAME }}`"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ "main" ]
@@ -12,7 +15,7 @@ concurrency:
 
 # Single source of truth for tool versions
 env:
-  GO_VERSION: '1.24.7'
+  GO_VERSION: '1.24.9'
 
 jobs:
   dis-redirect-proxy-audit:
