@@ -23,7 +23,8 @@ func TestSetup(t *testing.T) {
 		r := mux.NewRouter()
 		cfg := &config.Config{}
 		redisClientMock := &clientMocks.RedisMock{}
-		redirectProxy := proxy.Setup(ctx, r, cfg, redisClientMock)
+		redirectProxy, err := proxy.Setup(ctx, r, cfg, redisClientMock)
+		So(err, ShouldBeNil)
 
 		Convey("When created, all HTTP methods should be accepted", func() {
 			So(hasRoute(redirectProxy.Router, "/", http.MethodGet), ShouldBeTrue)
@@ -78,7 +79,8 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 
 			ctx := context.Background()
 			r := mux.NewRouter()
-			redirectProxy := proxy.Setup(ctx, r, cfg, redisClientMock)
+			redirectProxy, err := proxy.Setup(ctx, r, cfg, redisClientMock)
+			So(err, ShouldBeNil)
 
 			Convey("It should register routes for all HTTP methods", func() {
 				methods := []string{
@@ -132,7 +134,8 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 
 			ctx := context.Background()
 			r := mux.NewRouter()
-			redirectProxy := proxy.Setup(ctx, r, cfg, redisClientMock)
+			redirectProxy, err := proxy.Setup(ctx, r, cfg, redisClientMock)
+			So(err, ShouldBeNil)
 
 			Convey("Then the middleware should forward the request", func() {
 				// Test a request that should not trigger a redirect
@@ -166,7 +169,8 @@ func TestProxyHandleRequestOK(t *testing.T) {
 			EnableRedirects:   false,
 			ProxiedServiceURL: mockTargetServer.URL}
 		redisCli := &clientMocks.RedisMock{}
-		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
+		testProxy, err := proxy.Setup(ctx, router, cfg, redisCli)
+		So(err, ShouldBeNil)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
@@ -193,7 +197,8 @@ func TestProxyHandleRequestError(t *testing.T) {
 			EnableRedirects:   false,
 			ProxiedServiceURL: "http://invalid-url"}
 		redisCli := &clientMocks.RedisMock{}
-		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
+		testProxy, err := proxy.Setup(ctx, router, cfg, redisCli)
+		So(err, ShouldBeNil)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
@@ -225,7 +230,8 @@ func TestProxyHandleCustomHeaderAndBody(t *testing.T) {
 			EnableRedirects:   false,
 			ProxiedServiceURL: mockTargetServer.URL}
 		redisCli := &clientMocks.RedisMock{}
-		testProxy := proxy.Setup(ctx, router, cfg, redisCli)
+		testProxy, err := proxy.Setup(ctx, router, cfg, redisCli)
+		So(err, ShouldBeNil)
 
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
@@ -236,6 +242,155 @@ func TestProxyHandleCustomHeaderAndBody(t *testing.T) {
 				So(w.Code, ShouldEqual, http.StatusOK)
 				So(w.Body.String(), ShouldEqual, "Custom Body Content")
 				So(w.Header().Get("Custom-Header"), ShouldEqual, "HeaderValue")
+			})
+		})
+	})
+}
+
+func TestProxyHandleFallback(t *testing.T) {
+	Convey("Given a Proxy with releases fallback enabled and a mock Wagtail that returns 404", t, func() {
+		// Mock Wagtail server that always returns 404
+		mockWagtailServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Mock Wagtail Response"))
+		}))
+		defer mockWagtailServer.Close()
+
+		// Mock Proxied service that returns 200 OK
+		mockProxiedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Mock Proxied Server Response"))
+		}))
+		defer mockProxiedServer.Close()
+
+		ctx := context.Background()
+		router := mux.NewRouter()
+		cfg := &config.Config{
+			EnableRedirects:        false,
+			EnableReleasesFallback: true,
+			ProxiedServiceURL:      mockProxiedServer.URL,
+			WagtailURL:             mockWagtailServer.URL,
+		}
+		redisCli := &clientMocks.RedisMock{}
+		testProxy, err := proxy.Setup(ctx, router, cfg, redisCli)
+		So(err, ShouldBeNil)
+
+		Convey("When a request is sent to a /releases/ path", func() {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/releases/some-release", http.NoBody)
+			testProxy.Router.ServeHTTP(w, r)
+
+			Convey("Then the proxy should return the proxied service response", func() {
+				So(w.Code, ShouldEqual, http.StatusOK)
+				So(w.Body.String(), ShouldEqual, "Mock Proxied Server Response")
+			})
+		})
+	})
+
+	Convey("Given a Proxy with releases fallback enabled and a mock Wagtail that returns 200 OK", t, func() {
+		// Mock Wagtail server that returns 200 OK
+		mockWagtailServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			fmt.Println("Wagtail server received request")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte("Wagtail Response"))
+			if err != nil {
+				panic(err)
+			}
+		}))
+		defer mockWagtailServer.Close()
+
+		ctx := context.Background()
+		router := mux.NewRouter()
+		cfg := &config.Config{
+			EnableRedirects:        false,
+			EnableReleasesFallback: true,
+			ProxiedServiceURL:      "http://localhost:9999", // Unused in this test but must be valid.
+			WagtailURL:             mockWagtailServer.URL,
+		}
+		redisCli := &clientMocks.RedisMock{}
+		testProxy, err := proxy.Setup(ctx, router, cfg, redisCli)
+		So(err, ShouldBeNil)
+
+		Convey("When a request is sent to a /releases/ path", func() {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/releases/some-release", http.NoBody)
+			testProxy.Router.ServeHTTP(w, r)
+
+			Convey("Then the proxy should return the Wagtail response", func() {
+				So(w.Code, ShouldEqual, http.StatusOK)
+				So(w.Body.String(), ShouldEqual, "Wagtail Response")
+			})
+		})
+	})
+
+	Convey("Given a Proxy with releases fallback enabled and a mock Wagtail shouldn't be called", t, func() {
+		// Mock Wagtail server that always returns 404
+		mockWagtailServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			t.Fatalf("unexpected call to test server: %s %s", r.Method, r.URL.Path)
+		}))
+		defer mockWagtailServer.Close()
+
+		// Mock Proxied service that returns 200 OK
+		mockProxiedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Mock Proxied Server Response"))
+		}))
+		defer mockProxiedServer.Close()
+
+		ctx := context.Background()
+		router := mux.NewRouter()
+		cfg := &config.Config{
+			EnableRedirects:        false,
+			EnableReleasesFallback: true,
+			ProxiedServiceURL:      mockProxiedServer.URL,
+			WagtailURL:             mockWagtailServer.URL,
+		}
+		redisCli := &clientMocks.RedisMock{}
+		testProxy, err := proxy.Setup(ctx, router, cfg, redisCli)
+		So(err, ShouldBeNil)
+
+		Convey("When a request is sent to a non /releases/ path", func() {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/some-other-path", http.NoBody)
+			testProxy.Router.ServeHTTP(w, r)
+
+			Convey("Then the proxy should return the proxied service response", func() {
+				So(w.Code, ShouldEqual, http.StatusOK)
+				So(w.Body.String(), ShouldEqual, "Mock Proxied Server Response")
+
+				Convey("And the mock Wagtail server should not have been called", func() {
+					// Wagtail handler would have caused the test to fail if it was called
+				})
+			})
+		})
+
+		Convey("When a request is sent to the /releases path", func() {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/releases", http.NoBody)
+			testProxy.Router.ServeHTTP(w, r)
+
+			Convey("Then the proxy should return the proxied service response", func() {
+				So(w.Code, ShouldEqual, http.StatusOK)
+				So(w.Body.String(), ShouldEqual, "Mock Proxied Server Response")
+
+				Convey("And the mock Wagtail server should not have been called", func() {
+					// Wagtail handler would have caused the test to fail if it was called
+				})
+			})
+		})
+
+		Convey("When a request is sent to the /release/calendar path", func() {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/release/calendar", http.NoBody)
+			testProxy.Router.ServeHTTP(w, r)
+
+			Convey("Then the proxy should return the proxied service response", func() {
+				So(w.Code, ShouldEqual, http.StatusOK)
+				So(w.Body.String(), ShouldEqual, "Mock Proxied Server Response")
+
+				Convey("And the mock Wagtail server should not have been called", func() {
+					// Wagtail handler would have caused the test to fail if it was called
+				})
 			})
 		})
 	})

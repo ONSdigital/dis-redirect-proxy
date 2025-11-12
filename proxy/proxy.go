@@ -9,7 +9,7 @@ import (
 
 	"github.com/ONSdigital/dis-redirect-proxy/clients"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
-	"github.com/ONSdigital/dis-redirect-proxy/proxy/alt"
+	"github.com/ONSdigital/dp-net/v3/http/fallback"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/v9"
@@ -41,15 +41,18 @@ func Setup(ctx context.Context, r *mux.Router, cfg *config.Config, redisCli clie
 
 	proxyHandler := newReverseProxy(proxiedUrl)
 
-	wagtailProxy, err := url.Parse(cfg.WagtailURL)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse wagtail proxied service url: %w", err))
-	}
-	wagtailProxyHandler := newReverseProxy(wagtailProxy)
+	// If releases fallback is enabled, set up alternative handler
+	if cfg.EnableReleasesFallback {
+		log.Info(ctx, "enabling releases fallback proxy")
+		wagtailProxy, err := url.Parse(cfg.WagtailURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse wagtail proxied service url: %w", err)
+		}
+		wagtailProxyHandler := newReverseProxy(wagtailProxy)
 
-	alternativeHandler := alt.Try(wagtailProxyHandler).WhenStatus(http.StatusNotFound).Then(proxyHandler)
-	// TODO  feature flagged
-	r.PathPrefix("/releases/*").Name("Release alternative").Handler(alternativeHandler)
+		alternativeHandler := fallback.Try(wagtailProxyHandler).WhenStatus(http.StatusNotFound).Then(proxyHandler)
+		r.PathPrefix("/releases/").Name("Release alternative").Handler(alternativeHandler)
+	}
 
 	r.PathPrefix("/").Name("Proxy Catch-All").Handler(proxyHandler)
 	return proxy, nil
