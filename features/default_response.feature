@@ -1,3 +1,4 @@
+@Proxy
 Feature: Unmodified response
 
   Under normal circumstances, the proxy will return the ProxiedService response to the client completely unmodified. This
