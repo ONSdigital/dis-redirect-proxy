@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ONSdigital/dis-redirect-proxy/service"
-	"github.com/ONSdigital/dis-redirect-proxy/service/mock"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/cucumber/godog"
 	"github.com/stretchr/testify/assert"
@@ -38,12 +37,48 @@ func (c *ProxyComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the redirect proxy is running$`, c.theRedirectProxyIsRunning)
 	ctx.Step(`^I should receive an empty response$`, c.iShouldReceiveAnEmptyResponse)
 	ctx.Step(`^the response from the Proxied Service should be returned unmodified by the Proxy$`, c.iShouldReceiveTheSameUnmodifiedResponseFromProxiedService)
+	ctx.Step(`^the response from the Wagtail Service should be returned unmodified by the Proxy$`, c.iShouldReceiveTheSameUnmodifiedResponseFromWagtailService)
 	ctx.Step(`^the Proxy receives a GET request for "([^"]*)"$`, c.apiFeature.IGet)
 	ctx.Step(`^the Proxy receives a POST request for "([^"]*)"$`, c.apiFeature.IPostToWithBody)
 	ctx.Step(`^the Proxy receives a PUT request for "([^"]*)"$`, c.apiFeature.IPut)
 	ctx.Step(`^the Proxy receives a PATCH request for "([^"]*)"$`, c.apiFeature.IPatch)
 	ctx.Step(`^the Proxy receives a DELETE request for "([^"]*)"$`, c.apiFeature.IDelete)
+	// TODO: abstract these to a common env var step definition
 	ctx.Step(`^the feature flag EnableRedirects is set to "([^"]*)"$`, c.theFeatureFlagEnableRedirectsIsSetTo)
+	ctx.Step(`^the feature flag EnableReleasesFallback is set to "([^"]*)"$`, c.theFeatureFlagEnableReleasesFallbackIsSetTo)
+}
+
+func (c *ProxyComponent) stopService() error {
+	if err := c.svc.Close(context.Background()); err != nil {
+		return fmt.Errorf("failed to stop existing service: %w", err)
+	}
+	c.ServiceRunning = false
+	return nil
+}
+
+func (c *ProxyComponent) startService() error {
+	var err error
+	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
+	if err != nil {
+		return fmt.Errorf("failed to start service: %w", err)
+	}
+	c.ServiceRunning = true
+	return nil
+}
+
+func (c *ProxyComponent) restartService() error {
+	// Stop current service if running
+	if c.ServiceRunning {
+		if err := c.stopService(); err != nil {
+			return err
+		}
+	}
+
+	// Start service with updated config
+	if err := c.startService(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *ProxyComponent) SetEnableRedirects(enabled bool) error {
@@ -51,39 +86,27 @@ func (c *ProxyComponent) SetEnableRedirects(enabled bool) error {
 		return fmt.Errorf("config is not initialized")
 	}
 
-	// Stop current service if running
-	if c.ServiceRunning {
-		if err := c.svc.Close(context.Background()); err != nil {
-			return fmt.Errorf("failed to stop existing service: %w", err)
-		}
-		c.ServiceRunning = false
-	}
-
 	// Update the flag
 	c.Config.EnableRedirects = enabled
 
-	// Ensure required fields are filled
-	c.Config.ProxiedServiceURL = c.proxiedServiceFeature.Server.URL
-	c.Config.RedisAddress = c.redisFeature.Server.Addr()
-	c.Config.HealthCheckInterval = 1 * time.Second
-	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
-	c.Config.BindAddr = bindAddress
-
-	// Service initialiser mock setup
-	initMock := &mock.InitialiserMock{
-		DoGetHTTPServerFunc:        c.DoGetHTTPServer,
-		DoGetHealthCheckFunc:       c.getHealthCheckOK,
-		DoGetRequestMiddlewareFunc: c.DoGetRequestMiddleware,
+	if err := c.restartService(); err != nil {
+		return err
 	}
-	c.svcList = service.NewServiceList(initMock)
 
-	// Restart service with updated config
-	var err error
-	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
-	if err != nil {
-		return fmt.Errorf("failed to restart service: %w", err)
+	return nil
+}
+
+func (c *ProxyComponent) SetReleaseFallback(enabled bool) error {
+	if c.Config == nil {
+		return fmt.Errorf("config is not initialized")
 	}
-	c.ServiceRunning = true
+
+	// Update the flag
+	c.Config.EnableReleasesFallback = enabled
+
+	if err := c.restartService(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -101,6 +124,19 @@ func (c *ProxyComponent) theFeatureFlagEnableRedirectsIsSetTo(value string) erro
 	return nil
 }
 
+func (c *ProxyComponent) theFeatureFlagEnableReleasesFallbackIsSetTo(value string) error {
+	enabled, err := strconv.ParseBool(value)
+	if err != nil {
+		return fmt.Errorf("invalid boolean value: %q", value)
+	}
+
+	if err := c.SetReleaseFallback(enabled); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *ProxyComponent) theRedirectProxyIsRunning() {
 	assert.Equal(c, true, c.ServiceRunning)
 }
@@ -110,16 +146,16 @@ func (c *ProxyComponent) iShouldReceiveAnEmptyResponse() error {
 	return c.apiFeature.IShouldReceiveTheFollowingResponse(emptyResponse)
 }
 
-func (c *ProxyComponent) iShouldReceiveTheSameUnmodifiedResponseFromProxiedService() error {
+func (c *ProxyComponent) checkResponseAgainstProxiedService(serviceFeature *ProxiedServiceFeature) error {
 	// Ensure the body is the same
-	proxiedServiceBody := &godog.DocString{Content: c.proxiedServiceFeature.Body}
-	err := c.apiFeature.IShouldReceiveTheFollowingResponse(proxiedServiceBody)
+	body := &godog.DocString{Content: serviceFeature.Body}
+	err := c.apiFeature.IShouldReceiveTheFollowingResponse(body)
 	if err != nil {
 		return err
 	}
 
 	// Ensure all the headers that the tester set in the mock ProxiedService response are present in the Proxy response
-	for name, value := range c.proxiedServiceFeature.Headers {
+	for name, value := range serviceFeature.Headers {
 		err = c.apiFeature.TheResponseHeaderShouldBe(name, value)
 		if err != nil {
 			return err
@@ -130,21 +166,29 @@ func (c *ProxyComponent) iShouldReceiveTheSameUnmodifiedResponseFromProxiedServi
 	for name, values := range c.apiFeature.HTTPResponse.Header {
 		if shouldEvaluateHeader(name) {
 			for _, value := range values {
-				proxiedServiceHeaderValue := c.proxiedServiceFeature.Headers[name]
-				errorMessage := fmt.Sprintf(`The Proxy response's %q header has a different value to the one sent by ProxiedService`, name)
-				assert.Equal(c, proxiedServiceHeaderValue, value, errorMessage)
+				serviceHeaderValue := serviceFeature.Headers[name]
+				errorMessage := fmt.Sprintf(`The Proxy response's %q header has a different value to the one sent by %s`, name, serviceFeature.Name)
+				assert.Equal(c, serviceHeaderValue, value, errorMessage)
 			}
 		}
 	}
 
 	// Ensure the status code is the same
-	proxiedServiceStatusCode := strconv.Itoa(c.proxiedServiceFeature.StatusCode)
-	err = c.apiFeature.TheHTTPStatusCodeShouldBe(proxiedServiceStatusCode)
+	serviceStatusCode := strconv.Itoa(serviceFeature.StatusCode)
+	err = c.apiFeature.TheHTTPStatusCodeShouldBe(serviceStatusCode)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (c *ProxyComponent) iShouldReceiveTheSameUnmodifiedResponseFromWagtailService() error {
+	return c.checkResponseAgainstProxiedService(c.wagtailFeature)
+}
+
+func (c *ProxyComponent) iShouldReceiveTheSameUnmodifiedResponseFromProxiedService() error {
+	return c.checkResponseAgainstProxiedService(c.proxiedServiceFeature)
 }
 
 // shouldEvaluateHeader helps determine which headers should be skipped when comparing the ProxiedService and the Proxy response

@@ -32,9 +32,10 @@ type ProxyComponent struct {
 	redisFeature          *componentTest.RedisFeature
 	StartTime             time.Time
 	proxiedServiceFeature *ProxiedServiceFeature
+	wagtailFeature        *ProxiedServiceFeature
 }
 
-func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat *ProxiedServiceFeature) (*ProxyComponent, error) {
+func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat *ProxiedServiceFeature, wagtailFeat *ProxiedServiceFeature) (*ProxyComponent, error) {
 	c := &ProxyComponent{
 		errorChan:      make(chan error),
 		ServiceRunning: false,
@@ -51,6 +52,9 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 
 	c.proxiedServiceFeature = proxiedServiceFeat
 	c.Config.ProxiedServiceURL = c.proxiedServiceFeature.Server.URL
+
+	c.wagtailFeature = wagtailFeat
+	c.Config.WagtailURL = c.wagtailFeature.Server.URL
 
 	c.redisFeature = redisFeat
 	c.Config.RedisAddress = c.redisFeature.Server.Addr()

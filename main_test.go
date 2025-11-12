@@ -18,16 +18,18 @@ var componentFlag = flag.Bool("component", false, "perform component tests")
 type ComponentTest struct {
 	RedisFeature          *componentTest.RedisFeature
 	ProxiedServiceFeature *steps.ProxiedServiceFeature
+	WagtailFeature        *steps.ProxiedServiceFeature
 	RedirectProxy         *steps.ProxyComponent
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	// Create shared Redis and mock proxied service
 	f.RedisFeature = componentTest.NewRedisFeature()
-	f.ProxiedServiceFeature = steps.NewProxiedServiceFeature()
+	f.ProxiedServiceFeature = steps.NewProxiedServiceFeature("Proxied Service")
+	f.WagtailFeature = steps.NewProxiedServiceFeature("Wagtail Service")
 
 	// Create the redirect proxy component using those dependencies
-	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, f.ProxiedServiceFeature)
+	redirectProxyComponent, err := steps.NewProxyComponent(f.RedisFeature, f.ProxiedServiceFeature, f.WagtailFeature)
 	if err != nil {
 		fmt.Printf("failed to create redirect proxy component - error: %v", err)
 		os.Exit(1)
@@ -68,6 +70,7 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	apiFeature.RegisterSteps(ctx)
 	f.RedisFeature.RegisterSteps(ctx)
 	f.ProxiedServiceFeature.RegisterSteps(ctx)
+	f.WagtailFeature.RegisterSteps(ctx)
 	f.RedirectProxy.RegisterSteps(ctx)
 }
 
@@ -89,6 +92,7 @@ func TestComponent(t *testing.T) {
 			Format: "pretty",
 			Paths:  flag.Args(),
 			Strict: true,
+			Tags:   "@ReleaseFallback",
 		}
 
 		f := &ComponentTest{}

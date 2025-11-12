@@ -1,6 +1,7 @@
 package steps
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
@@ -15,11 +16,13 @@ type ProxiedServiceFeature struct {
 	Body       string
 	StatusCode int
 	Headers    map[string]string
+	Name       string
 }
 
-func NewProxiedServiceFeature() *ProxiedServiceFeature {
+func NewProxiedServiceFeature(name string) *ProxiedServiceFeature {
 	f := ProxiedServiceFeature{
 		Headers: make(map[string]string),
+		Name:    name,
 	}
 
 	f.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -38,10 +41,10 @@ func NewProxiedServiceFeature() *ProxiedServiceFeature {
 }
 
 func (f *ProxiedServiceFeature) RegisterSteps(ctx *godog.ScenarioContext) {
-	ctx.Step(`^the Proxied Service will send the following response:$`, f.proxiedServiceWillSendTheFollowingResponse)
-	ctx.Step(`^the Proxied Service will send the following response with status "([^"]*)":$`, f.proxiedServiceWillSendTheFollowingResponseWithStatus)
-	ctx.Step(`^the Proxied Service will set the "([^"]*)" header to "([^"]*)"$`, f.proxiedServiceWillSetTheHeaderTo)
-	ctx.Step(`^the Proxied Service will set the HTTP status code to "([^"]*)"$`, f.proxiedServiceWillSetTheHTTPStatusCodeTo)
+	ctx.Step(fmt.Sprintf(`^the %s will send the following response:$`, f.Name), f.proxiedServiceWillSendTheFollowingResponse)
+	ctx.Step(fmt.Sprintf(`^the %s will send the following response with status "([^"]*)":$`, f.Name), f.proxiedServiceWillSendTheFollowingResponseWithStatus)
+	ctx.Step(fmt.Sprintf(`^the %s will set the "([^"]*)" header to "([^"]*)"$`, f.Name), f.proxiedServiceWillSetTheHeaderTo)
+	ctx.Step(fmt.Sprintf(`^the %s will set the HTTP status code to "([^"]*)"$`, f.Name), f.proxiedServiceWillSetTheHTTPStatusCodeTo)
 }
 
 func (f *ProxiedServiceFeature) proxiedServiceWillSendTheFollowingResponse(proxiedServiceBody *godog.DocString) error {
