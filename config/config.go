@@ -10,6 +10,7 @@ import (
 // Config represents service configuration for dis-redirect-proxy
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
+	EnableReleasesFallback     bool          `envconfig:"ENABLE_RELEASES_FALLBACK"`
 	EnableRedirects            bool          `envconfig:"ENABLE_REDIRECTS"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
@@ -20,6 +21,7 @@ type Config struct {
 	OtelEnabled                bool          `envconfig:"OTEL_ENABLED"`
 	RedisAddress               string        `envconfig:"REDIS_ADDRESS"`
 	ProxiedServiceURL          string        `envconfig:"PROXIED_SERVICE_URL"`
+	WagtailURL                 string        `envconfig:"WAGTAIL_URL"` // TODO consider naming
 }
 
 var cfg *Config
@@ -33,8 +35,10 @@ func Get() (*Config, error) {
 
 	cfg = &Config{
 		BindAddr:                   "localhost:30000",
+		EnableReleasesFallback:     false,
 		EnableRedirects:            false,
 		ProxiedServiceURL:          "http://localhost:20000",
+		WagtailURL:                 "http://localhost:20001", // TODO whatever this should be
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,

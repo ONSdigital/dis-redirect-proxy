@@ -2,11 +2,14 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 
 	"github.com/ONSdigital/dis-redirect-proxy/clients"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
-	"github.com/ONSdigital/dis-redirect-proxy/response"
+	"github.com/ONSdigital/dp-net/v3/http/fallback"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/v9"
@@ -19,7 +22,7 @@ type Proxy struct {
 }
 
 // Setup function sets up the proxy and returns a Proxy
-func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli clients.Redis) *Proxy {
+func Setup(ctx context.Context, r *mux.Router, cfg *config.Config, redisCli clients.Redis) (*Proxy, error) {
 	proxy := &Proxy{
 		Router:      r,
 		RedisClient: redisCli,
@@ -31,10 +34,28 @@ func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli client
 		r.Use(proxy.redirectMiddleware(redisCli))
 	}
 
-	r.PathPrefix("/").Name("Proxy Catch-All").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		proxy.manage(req.Context(), w, req, cfg)
-	})
-	return proxy
+	proxiedUrl, err := url.Parse(cfg.ProxiedServiceURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse proxied service url: %w", err)
+	}
+
+	proxyHandler := newReverseProxy(proxiedUrl)
+
+	// If releases fallback is enabled, set up alternative handler
+	if cfg.EnableReleasesFallback {
+		log.Info(ctx, "enabling releases fallback proxy")
+		wagtailProxy, err := url.Parse(cfg.WagtailURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse wagtail proxied service url: %w", err)
+		}
+		wagtailProxyHandler := newReverseProxy(wagtailProxy)
+
+		alternativeHandler := fallback.Try(wagtailProxyHandler).WhenStatus(http.StatusNotFound).Then(proxyHandler)
+		r.PathPrefix("/releases/").Name("Release alternative").Handler(alternativeHandler)
+	}
+
+	r.PathPrefix("/").Name("Proxy Catch-All").Handler(proxyHandler)
+	return proxy, nil
 }
 
 // redirectMiddleware checks Redis for a redirect URL
@@ -61,9 +82,9 @@ func (proxy *Proxy) redirectMiddleware(redisCli clients.Redis) mux.MiddlewareFun
 }
 
 // checkRedirect checks if a redirect exists in Redis
-func (proxy *Proxy) checkRedirect(url string, ctx context.Context, redisClient clients.Redis) (string, error) {
+func (proxy *Proxy) checkRedirect(checkURL string, ctx context.Context, redisClient clients.Redis) (string, error) {
 	// Get the redirect URL from Redis based on the incoming URL
-	redirectURL, err := redisClient.GetValue(ctx, url)
+	redirectURL, err := redisClient.GetValue(ctx, checkURL)
 	if err == redis.Nil {
 		// If the key does not exist, return an empty string
 		return "", nil
@@ -77,55 +98,15 @@ func (proxy *Proxy) checkRedirect(url string, ctx context.Context, redisClient c
 	return redirectURL, nil
 }
 
-func (proxy *Proxy) manage(ctx context.Context, w http.ResponseWriter, req *http.Request, cfg *config.Config) {
-	// Get the target URL based on the original request and the configuration
-	targetURL := getTargetURL(req.URL.String(), cfg)
-
-	log.Info(ctx, "forwarding request to target", log.Data{"target_url": targetURL})
-
-	// Create a new proxy request using the original request's context and body
-	proxyReq, err := http.NewRequestWithContext(ctx, req.Method, targetURL, req.Body)
-	if err != nil {
-		// Log the error and respond with a 400 Bad Request
-		log.Error(ctx, "error creating the proxy request", err)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+func newReverseProxy(proxiedUrl *url.URL) *httputil.ReverseProxy {
+	// TODO add end request logging
+	// TODO consider other proxy options eg. timeouts, proxy-from-env etc. (see dp-frontend-router main.go for similar)
+	reverseProxy := httputil.NewSingleHostReverseProxy(proxiedUrl)
+	dir := reverseProxy.Director
+	reverseProxy.Director = func(req *http.Request) {
+		log.Info(req.Context(), "forwarding request to target", log.Data{"request_url": req.URL.String(), "target": proxiedUrl.String()})
+		dir(req)
 	}
 
-	// Copy the headers from the original request to the proxy request
-	proxyReq.Header = req.Header
-	// Set the Host header explicitly to match the original request
-	proxyReq.Host = req.Host
-
-	// Create a new HTTP client with a custom redirect handler
-	client := &http.Client{
-		// Prevent automatic redirects
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	// Send the proxy request to the target service
-	serviceResponse, err := client.Do(proxyReq)
-	if err != nil {
-		log.Error(ctx, "error sending the proxy request", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	// Ensure the response body is closed once the function returns
-	defer func() {
-		if closeErr := serviceResponse.Body.Close(); closeErr != nil {
-			log.Error(ctx, "error closing the response body", closeErr)
-		}
-	}()
-
-	// Log the response status code for debugging purposes
-	log.Info(ctx, "service response received", log.Data{"status_code": serviceResponse.StatusCode})
-
-	response.WriteResponse(ctx, w, serviceResponse, req, cfg)
-}
-
-func getTargetURL(requestURL string, cfg *config.Config) string {
-	return cfg.ProxiedServiceURL + requestURL
+	return reverseProxy
 }

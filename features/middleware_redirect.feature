@@ -1,3 +1,4 @@
+@RedirectMiddleware
 Feature: Redirect middleware functionality
   As a user of the proxy service
   I want to ensure that the redirect middleware handles URL redirection properly based on Redis settings.
