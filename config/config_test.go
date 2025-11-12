@@ -24,6 +24,7 @@ func TestConfig(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(configuration, ShouldResemble, &Config{
 					BindAddr:                   "localhost:30000",
+					EnableReleasesFallback:     false,
 					EnableRedirects:            false,
 					ProxiedServiceURL:          "http://localhost:20000",
 					WagtailURL:                 "http://localhost:20001",
