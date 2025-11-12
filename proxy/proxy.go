@@ -110,7 +110,3 @@ func newReverseProxy(proxiedUrl *url.URL) *httputil.ReverseProxy {
 
 	return reverseProxy
 }
-
-func getTargetURL(requestURL string, cfg *config.Config) string {
-	return cfg.ProxiedServiceURL + requestURL
-}
