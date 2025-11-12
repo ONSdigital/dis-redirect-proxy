@@ -73,8 +73,10 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 
 func (f *ComponentTest) InitializeTestSuite(ctx *godog.TestSuiteContext) {
 	ctx.BeforeSuite(func() {
+		// No global setup required
 	})
 	ctx.AfterSuite(func() {
+		// No global teardown required
 	})
 }
 
