@@ -67,7 +67,11 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 
 	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
 	// proxy adds a catch-all route, so any other routes added after that one will never be reachable.
-	p := proxy.Setup(ctx, r, cfg, serviceList.RedisCli)
+	p, err := proxy.Setup(ctx, r, cfg, serviceList.RedisCli)
+	if err != nil {
+		log.Error(ctx, "failed to setup proxy", err)
+		return nil, err
+	}
 	hc.Start(ctx)
 
 	// Run the http server in a new go-routine

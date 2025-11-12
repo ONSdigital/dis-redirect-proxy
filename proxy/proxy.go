@@ -22,7 +22,7 @@ type Proxy struct {
 }
 
 // Setup function sets up the proxy and returns a Proxy
-func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli clients.Redis) *Proxy {
+func Setup(ctx context.Context, r *mux.Router, cfg *config.Config, redisCli clients.Redis) (*Proxy, error) {
 	proxy := &Proxy{
 		Router:      r,
 		RedisClient: redisCli,
@@ -36,8 +36,9 @@ func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli client
 
 	proxiedUrl, err := url.Parse(cfg.ProxiedServiceURL)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse proxied service url: %w", err)) //TODO handle error
+		return nil, fmt.Errorf("failed to parse proxied service url: %w", err)
 	}
+
 	proxyHandler := newReverseProxy(proxiedUrl)
 
 	wagtailProxy, err := url.Parse(cfg.WagtailURL)
@@ -51,7 +52,7 @@ func Setup(_ context.Context, r *mux.Router, cfg *config.Config, redisCli client
 	r.PathPrefix("/releases/*").Name("Release alternative").Handler(alternativeHandler)
 
 	r.PathPrefix("/").Name("Proxy Catch-All").Handler(proxyHandler)
-	return proxy
+	return proxy, nil
 }
 
 // redirectMiddleware checks Redis for a redirect URL
