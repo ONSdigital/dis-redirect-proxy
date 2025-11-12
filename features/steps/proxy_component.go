@@ -35,7 +35,7 @@ type ProxyComponent struct {
 	wagtailFeature        *ProxiedServiceFeature
 }
 
-func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat *ProxiedServiceFeature, wagtailFeat *ProxiedServiceFeature) (*ProxyComponent, error) {
+func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat, wagtailFeat *ProxiedServiceFeature) (*ProxyComponent, error) {
 	c := &ProxyComponent{
 		errorChan:      make(chan error),
 		ServiceRunning: false,
