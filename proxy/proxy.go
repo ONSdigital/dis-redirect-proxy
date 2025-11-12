@@ -82,9 +82,9 @@ func (proxy *Proxy) redirectMiddleware(redisCli clients.Redis) mux.MiddlewareFun
 }
 
 // checkRedirect checks if a redirect exists in Redis
-func (proxy *Proxy) checkRedirect(url string, ctx context.Context, redisClient clients.Redis) (string, error) {
+func (proxy *Proxy) checkRedirect(checkURL string, ctx context.Context, redisClient clients.Redis) (string, error) {
 	// Get the redirect URL from Redis based on the incoming URL
-	redirectURL, err := redisClient.GetValue(ctx, url)
+	redirectURL, err := redisClient.GetValue(ctx, checkURL)
 	if err == redis.Nil {
 		// If the key does not exist, return an empty string
 		return "", nil
