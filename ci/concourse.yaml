@@ -1,0 +1,12 @@
+application:
+  repo_name: dis-redirect-proxy
+helm:
+  repo_name: dis-helm-legacy-chart
+  values_files:
+    image_tag_key: tag
+    sandbox:
+      - values/dis-sandbox-internal.yaml
+      - values/dis-sandbox-external.yaml
+aws:
+  ecr:
+    application: dis-redirect-proxy
