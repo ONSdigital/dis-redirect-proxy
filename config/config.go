@@ -38,7 +38,7 @@ func Get() (*Config, error) {
 		EnableReleasesFallback:     false,
 		EnableRedirects:            false,
 		ProxiedServiceURL:          "http://localhost:20000",
-		WagtailURL:                 "http://localhost:20001", // TODO whatever this should be
+		WagtailURL:                 "http://localhost:8000",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
