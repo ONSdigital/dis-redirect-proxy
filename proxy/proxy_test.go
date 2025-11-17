@@ -63,7 +63,10 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 				http.Redirect(w, r, "/final-url", http.StatusPermanentRedirect)
 			case nonRedirectURL:
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("This is the non-redirect URL response"))
+				_, err := w.Write([]byte("This is the non-redirect URL response"))
+				if err != nil {
+					t.Fatalf("unexpected err writing mock response: %v", err)
+				}
 			default:
 				http.NotFound(w, r)
 			}
@@ -158,7 +161,7 @@ func TestProxyHandleRequestOK(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte("Mock Target Response"))
 			if err != nil {
-				panic(err)
+				t.Fatalf("unexpected err writing mock response: %v", err)
 			}
 		}))
 		defer mockTargetServer.Close()
@@ -219,7 +222,7 @@ func TestProxyHandleCustomHeaderAndBody(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte("Custom Body Content"))
 			if err != nil {
-				panic(err)
+				t.Fatalf("unexpected err writing mock response: %v", err)
 			}
 		}))
 		defer mockTargetServer.Close()
@@ -252,14 +255,20 @@ func TestProxyHandleFallback(t *testing.T) {
 		// Mock Wagtail server that always returns 404
 		mockWagtailServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("Mock Wagtail Response"))
+			_, err := w.Write([]byte("Mock Wagtail Response"))
+			if err != nil {
+				t.Fatalf("unexpected err writing mock response: %v", err)
+			}
 		}))
 		defer mockWagtailServer.Close()
 
 		// Mock Proxied service that returns 200 OK
 		mockProxiedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Mock Proxied Server Response"))
+			_, err := w.Write([]byte("Mock Proxied Server Response"))
+			if err != nil {
+				t.Fatalf("unexpected err writing mock response: %v", err)
+			}
 		}))
 		defer mockProxiedServer.Close()
 
@@ -333,7 +342,10 @@ func TestProxyHandleFallback(t *testing.T) {
 		// Mock Proxied service that returns 200 OK
 		mockProxiedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Mock Proxied Server Response"))
+			_, err := w.Write([]byte("Mock Proxied Server Response"))
+			if err != nil {
+				t.Fatalf("unexpected err writing mock response: %v", err)
+			}
 		}))
 		defer mockProxiedServer.Close()
 
