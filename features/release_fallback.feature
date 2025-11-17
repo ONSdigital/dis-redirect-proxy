@@ -27,7 +27,7 @@ Feature: Release fallback functionality
       """
     Then the response from the Proxied Service should be returned unmodified by the Proxy
 
-  Scenario: Get release from Wagtail
+  Scenario Outline: Get release from Wagtail
     Given the Wagtail Service will send the following response with status "200":
       """
       Mock response
@@ -48,7 +48,7 @@ Feature: Release fallback functionality
       | PATCH          |
       | DELETE         |
 
-  Scenario: Get release from proxy via Wagtail
+  Scenario Outline: Get release from proxy via Wagtail
     Given the Wagtail Service will send the following response with status "404":
       """
       Mock Wagtail response
@@ -71,7 +71,7 @@ Feature: Release fallback functionality
       | PATCH          |
       | DELETE         |
 
-  Scenario: Get release from Wagtail - non 404 codes
+  Scenario Outline: Get release from Wagtail - non 404 codes
     Given the Wagtail Service will send the following response with status "<status_code>":
       """
       Mock Wagtail response
