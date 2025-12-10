@@ -3,7 +3,7 @@ application:
 helm:
   repo_name: dis-helm-legacy-chart
   values_files:
-    image_tag_key: tag
+    image_tag_key: disRedirectProxyTag
     sandbox:
       - values/dis-sandbox-internal.yaml
       - values/dis-sandbox-external.yaml
