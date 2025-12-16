@@ -4,7 +4,7 @@ A Go Service to redirect legacy URLs requested by users
 
 ## Getting started
 
-* Run `make debug` to run application on http://localhost:30000
+* Run `make debug` to run application on <http://localhost:30000>
 * Run `make help` to see full list of make targets
 
 ### Dependencies
