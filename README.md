@@ -1,6 +1,8 @@
 # dis-redirect-proxy
 
-A Go Service to redirect legacy URLs requested by users
+A Go Service to redirect legacy URLs requested by users.
+
+It also has fallback functionality for particular paths where it is not known which service contains which URL.
 
 ## Getting started
 
