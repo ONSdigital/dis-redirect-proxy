@@ -44,6 +44,8 @@ func TestRun(t *testing.T) {
 		cfg, err := config.Get()
 		So(err, ShouldBeNil)
 
+		cfg.EnableRedirects = true
+
 		hcMock := &mock.HealthCheckerMock{
 			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
 			StartFunc:    func(ctx context.Context) {},
@@ -203,6 +205,28 @@ func TestRun(t *testing.T) {
 
 			Reset(func() {
 				// This reset is run after each `Convey` at the same scope (indentation)
+			})
+		})
+
+		Convey("When EnableRedirects is set to false", func() {
+			cfg.EnableRedirects = false
+
+			initMock := &mock.InitialiserMock{
+				DoGetHTTPServerFunc:        funcDoGetHTTPServer,
+				DoGetHealthCheckFunc:       funcDoGetHealthcheckOk,
+				DoGetRequestMiddlewareFunc: funcDoGetRequestMiddleware,
+			}
+			svcErrors := make(chan error, 1)
+			serverWg.Add(1)
+			svcList := service.NewServiceList(initMock)
+
+			Convey("Then service run does not fail", func() {
+				_, err := service.Run(ctx, cfg, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
+				So(err, ShouldBeNil)
+
+				Convey("And no checkers are registered ", func() {
+					So(hcMock.AddCheckCalls(), ShouldHaveLength, 0)
+				})
 			})
 		})
 	})

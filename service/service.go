@@ -61,7 +61,7 @@ func Run(ctx context.Context, cfg *config.Config, serviceList *ExternalServiceLi
 		return nil, err
 	}
 
-	if err := registerCheckers(ctx, hc, serviceList.RedisCli); err != nil {
+	if err := registerCheckers(ctx, cfg, hc, serviceList.RedisCli); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -137,13 +137,16 @@ func (svc *Service) Close(ctx context.Context) error {
 	return nil
 }
 
-func registerCheckers(ctx context.Context,
+func registerCheckers(ctx context.Context, cfg *config.Config,
 	hc HealthChecker, redisCli clients.Redis) (err error) {
 	hasErrors := false
 
-	if err = hc.AddCheck("Redis", redisCli.Checker); err != nil {
-		hasErrors = true
-		log.Error(ctx, "error adding check for redis", err)
+	if cfg.EnableRedirects {
+		err := hc.AddCheck("Redis", redisCli.Checker)
+		if err != nil {
+			hasErrors = true
+			log.Error(ctx, "error adding check for redis", err)
+		}
 	}
 
 	if hasErrors {
