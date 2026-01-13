@@ -57,6 +57,7 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 	c.Config.WagtailURL = c.wagtailFeature.Server.URL
 
 	c.redisFeature = redisFeat
+	c.Config.EnableRedirects = true
 	c.Config.RedisAddress = c.redisFeature.Server.Addr()
 	c.Config.HealthCheckInterval = 1 * time.Second
 	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
