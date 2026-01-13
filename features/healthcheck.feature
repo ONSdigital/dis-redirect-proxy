@@ -53,7 +53,7 @@ Feature: Healthcheck endpoint should inform the health of service
                         "name": "Redis",
                         "status": "CRITICAL",
                         "status_code": 500,
-                        "message": "couldn't connect to redis"
+                        "message": "dial tcp 127.0.0.1:6379: connect: connection refused"
                     }
                 ]
             }
@@ -83,7 +83,7 @@ Feature: Healthcheck endpoint should inform the health of service
                         "name": "Redis",
                         "status": "CRITICAL",
                         "status_code": 500,
-                        "message": "couldn't connect to redis"
+                        "message": "dial tcp 127.0.0.1:6379: connect: connection refused"
                     }
                 ]
             }
