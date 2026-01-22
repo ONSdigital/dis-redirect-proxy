@@ -50,6 +50,8 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 					return "http://localhost:8081/new-url", nil
 				case nonRedirectURL:
 					return "", nil
+				case "/health":
+					return "", nil
 				default:
 					return "", nil
 				}
@@ -124,6 +126,16 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 
 					// Assert that a normal response (200 OK) is returned
 					So(rr.Code, ShouldEqual, http.StatusOK)
+				})
+
+				Convey("When a request is made to /health, Redis should not be contacted", func() {
+					req, err := http.NewRequest("GET", "/health", http.NoBody)
+					So(err, ShouldBeNil)
+					rr := httptest.NewRecorder()
+					redirectProxy.Router.ServeHTTP(rr, req)
+
+					// Assert that Redis was not contacted for /health
+					So(redisClientMock.GetValueCalls(), ShouldBeEmpty)
 				})
 			})
 		})

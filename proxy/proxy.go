@@ -62,6 +62,12 @@ func Setup(ctx context.Context, r *mux.Router, cfg *config.Config, redisCli clie
 func (proxy *Proxy) redirectMiddleware(redisCli clients.Redis) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			// Skip redirect check for health endpoint
+			if req.URL.Path == "/health" {
+				next.ServeHTTP(w, req)
+				return
+			}
+
 			redirectURL, err := proxy.checkRedirect(req.URL.String(), req.Context(), redisCli)
 			if err == nil && redirectURL != "" {
 				// Redirect with 308 Permanent Redirect
