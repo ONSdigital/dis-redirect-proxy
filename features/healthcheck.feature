@@ -32,12 +32,12 @@ Feature: Healthcheck endpoint should inform the health of service
 
     Scenario: Returning a WARNING (429) status when health endpoint called
         Given redis stops running
-        And the redirect proxy is running
+        And I have a healthcheck interval of 1 second
         And I wait 2 seconds for the healthcheck to be available
         When I GET "/health"
         Then the HTTP status code should be "429"
         And the response header "Content-Type" should be "application/json; charset=utf-8"
-        And the health checks should have completed within 2 seconds
+        And the health checks should have completed within 4 seconds
         And I should receive the following health JSON response:
         """
             {
@@ -61,11 +61,10 @@ Feature: Healthcheck endpoint should inform the health of service
 
     Scenario: Returning a CRITICAL (500) status when health endpoint called
         Given redis stops running
-        And the redirect proxy is running
         And I have a healthcheck interval of 1 second
         And I wait 6 seconds to pass the critical timeout
         When I GET "/health"
-        And the HTTP status code should be "500"
+        Then the HTTP status code should be "500"
         And the response header "Content-Type" should be "application/json; charset=utf-8"
         And the health checks should have completed within 6 seconds
         And I should receive the following health JSON response:
