@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 
 	"github.com/ONSdigital/dis-redirect-proxy/clients"
@@ -68,14 +69,37 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 }
 
 var GetRedisClient = func(ctx context.Context, cfg *config.Config) (clients.Redis, error) {
-	clientConfig := &disRedis.ClientConfig{
-		Address: cfg.RedisAddress,
+	clientCfg := &disRedis.ClientConfig{
+		Address:     cfg.RedisAddress,
+		ClusterName: cfg.RedisClusterName,
+		Region:      cfg.RedisRegion,
+		Service:     cfg.RedisService,
+		Username:    cfg.RedisUsername,
 	}
-	redisClient, err := disRedis.NewClient(ctx, clientConfig)
 
-	if err != nil {
-		log.Error(ctx, "Failed to create dis-redis client", err)
-		return nil, err
+	if cfg.RedisSecProtocol == config.RedisTLSProtocol {
+		log.Info(ctx, "redis TLS protocol specified, initializing dis-redis client with TLS")
+		clientCfg.TLSConfig = &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: false,
+		}
+	}
+
+	var redisClient clients.Redis
+	var err error
+
+	if cfg.RedisRegion != "" && cfg.RedisService != "" && cfg.RedisClusterName != "" {
+		redisClient, err = disRedis.NewClusterClient(ctx, clientCfg)
+		if err != nil {
+			log.Error(ctx, "failed to create dis-redis cluster client", err)
+			return nil, err
+		}
+	} else {
+		redisClient, err = disRedis.NewClient(ctx, clientCfg)
+		if err != nil {
+			log.Error(ctx, "failed to create dis-redis client", err)
+			return nil, err
+		}
 	}
 
 	return redisClient, nil

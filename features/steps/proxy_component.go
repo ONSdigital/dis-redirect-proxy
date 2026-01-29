@@ -58,7 +58,7 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 
 	c.redisFeature = redisFeat
 	c.Config.EnableRedirects = true
-	c.Config.RedisAddress = c.redisFeature.Server.Addr()
+	c.Config.RedisAddress = c.redisFeature.Client.Options().Addr
 	c.Config.HealthCheckInterval = 1 * time.Second
 	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
 	c.Config.BindAddr = bindAddress
@@ -94,11 +94,10 @@ func (c *ProxyComponent) Reset() *ProxyComponent {
 
 func (c *ProxyComponent) Close() error {
 	if c.svc != nil && c.ServiceRunning {
-		c.proxiedServiceFeature.Server.Close()
-		c.redisFeature.Server.Close()
 		if err := c.svc.Close(context.Background()); err != nil {
 			return err
 		}
+		c.proxiedServiceFeature.Server.Close()
 		c.ServiceRunning = false
 	}
 	return nil

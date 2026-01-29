@@ -15,6 +15,10 @@ import (
 
 var componentFlag = flag.Bool("component", false, "perform component tests")
 
+var redisOpts = componentTest.RedisOptions{
+	RedisVersion: "7.2",
+}
+
 type ComponentTest struct {
 	RedisFeature          *componentTest.RedisFeature
 	ProxiedServiceFeature *steps.ProxiedServiceFeature
@@ -24,7 +28,7 @@ type ComponentTest struct {
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	// Create shared Redis and mock proxied service
-	f.RedisFeature = componentTest.NewRedisFeature()
+	f.RedisFeature = componentTest.NewRedisFeature(redisOpts)
 	f.ProxiedServiceFeature = steps.NewProxiedServiceFeature("Proxied Service")
 	f.WagtailFeature = steps.NewProxiedServiceFeature("Wagtail Service")
 
@@ -43,7 +47,7 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		// Ensure Redis is ready
 		if f.RedisFeature == nil {
-			f.RedisFeature = componentTest.NewRedisFeature()
+			f.RedisFeature = componentTest.NewRedisFeature(redisOpts)
 		}
 
 		// Reset API state (routes, recorded requests, etc.)

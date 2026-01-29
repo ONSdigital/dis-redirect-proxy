@@ -24,18 +24,23 @@ func TestConfig(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(configuration, ShouldResemble, &Config{
 					BindAddr:                   "localhost:30000",
-					EnableReleasesFallback:     false,
 					EnableRedirects:            false,
-					ProxiedServiceURL:          "http://localhost:20000",
-					WagtailURL:                 "http://localhost:8000",
+					EnableReleasesFallback:     false,
 					GracefulShutdownTimeout:    5 * time.Second,
 					HealthCheckInterval:        30 * time.Second,
 					HealthCheckCriticalTimeout: 90 * time.Second,
+					ProxiedServiceURL:          "http://localhost:20000",
 					OTBatchTimeout:             5 * time.Second,
 					OTExporterOTLPEndpoint:     "localhost:4317",
 					OTServiceName:              "dis-redirect-proxy",
 					OtelEnabled:                false,
 					RedisAddress:               "localhost:6379",
+					RedisClusterName:           "",
+					RedisRegion:                "",
+					RedisSecProtocol:           "",
+					RedisService:               "",
+					RedisUsername:              "",
+					WagtailURL:                 "http://localhost:8000",
 				})
 			})
 
