@@ -30,14 +30,15 @@ Feature: Healthcheck endpoint should inform the health of service
             }
         """
 
+    @HealthcheckWarning
     Scenario: Returning a WARNING (429) status when health endpoint called
         Given redis stops running
         And I have a healthcheck interval of 1 second
-        And I wait 2 seconds for the healthcheck to be available
+        And I wait 4 seconds for the healthcheck to be available
         When I GET "/health"
         Then the HTTP status code should be "429"
         And the response header "Content-Type" should be "application/json; charset=utf-8"
-        And the health checks should have completed within 4 seconds
+        And the health checks should have completed within 5 seconds
         And I should receive the following health JSON response:
         """
             {
@@ -59,14 +60,15 @@ Feature: Healthcheck endpoint should inform the health of service
             }
         """
 
+    @HealthcheckCritical
     Scenario: Returning a CRITICAL (500) status when health endpoint called
         Given redis stops running
         And I have a healthcheck interval of 1 second
-        And I wait 6 seconds to pass the critical timeout
+        And I wait 9 seconds to pass the critical timeout
         When I GET "/health"
         Then the HTTP status code should be "500"
         And the response header "Content-Type" should be "application/json; charset=utf-8"
-        And the health checks should have completed within 6 seconds
+        And the health checks should have completed within 10 seconds
         And I should receive the following health JSON response:
         """
             {

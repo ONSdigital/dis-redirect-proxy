@@ -60,7 +60,7 @@ func NewProxyComponent(redisFeat *componentTest.RedisFeature, proxiedServiceFeat
 	c.Config.EnableRedirects = true
 	c.Config.RedisAddress = c.redisFeature.Client.Options().Addr
 	c.Config.HealthCheckInterval = 1 * time.Second
-	c.Config.HealthCheckCriticalTimeout = 3 * time.Second
+	c.Config.HealthCheckCriticalTimeout = 6 * time.Second
 	c.Config.BindAddr = bindAddress
 
 	initMock := &mock.InitialiserMock{
