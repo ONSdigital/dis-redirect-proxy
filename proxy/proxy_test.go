@@ -11,6 +11,7 @@ import (
 	clientMocks "github.com/ONSdigital/dis-redirect-proxy/clients/mock"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dis-redirect-proxy/proxy"
+	disRedis "github.com/ONSdigital/dis-redis"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -49,7 +50,7 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 				case "/old-url":
 					return "http://localhost:8081/new-url", nil
 				case nonRedirectURL:
-					return "", nil
+					return "", disRedis.ErrKeyNotFound
 				case "/health":
 					return "", nil
 				default:

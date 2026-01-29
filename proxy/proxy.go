@@ -7,12 +7,13 @@ import (
 	"net/http/httputil"
 	"net/url"
 
+	disRedis "github.com/ONSdigital/dis-redis"
+
 	"github.com/ONSdigital/dis-redirect-proxy/clients"
 	"github.com/ONSdigital/dis-redirect-proxy/config"
 	"github.com/ONSdigital/dp-net/v3/http/fallback"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
-	"github.com/redis/go-redis/v9"
 )
 
 // Proxy provides a struct to wrap the proxy around
@@ -91,7 +92,7 @@ func (proxy *Proxy) redirectMiddleware(redisCli clients.Redis) mux.MiddlewareFun
 func (proxy *Proxy) checkRedirect(checkURL string, ctx context.Context, redisClient clients.Redis) (string, error) {
 	// Get the redirect URL from Redis based on the incoming URL
 	redirectURL, err := redisClient.GetValue(ctx, checkURL)
-	if err == redis.Nil {
+	if err == disRedis.ErrKeyNotFound {
 		// If the key does not exist, return an empty string
 		return "", nil
 	} else if err != nil {
