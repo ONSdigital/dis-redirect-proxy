@@ -16,6 +16,7 @@ concurrency:
 # Single source of truth for tool versions
 env:
   GO_VERSION: '1.26.1'
+  GOLANGCI_LINT_VERSION: 'v2.10.1'
 
 jobs:
   dis-redirect-proxy-audit:
@@ -59,7 +60,7 @@ jobs:
       - name: Run lint checks
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.5.0
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
 
   dis-redirect-proxy-unit:
     runs-on: ubuntu-latest
