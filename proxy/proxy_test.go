@@ -169,7 +169,9 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 
 func TestProxyHandleRequestOK(t *testing.T) {
 	Convey("Given a Proxy and a mock target service", t, func() {
-		mockTargetServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		received := make(chan *http.Request, 1)
+		mockTargetServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			received <- r
 			w.Header().Set("mock-header", "test")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte("Mock Target Response"))
@@ -191,15 +193,16 @@ func TestProxyHandleRequestOK(t *testing.T) {
 		Convey("When a request is sent", func() {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/test-endpoint", http.NoBody)
+			originalHost := "original.test"
+			r.Host = originalHost
 			testProxy.Router.ServeHTTP(w, r)
+			upstreamReq := <-received
 
 			Convey("Then the proxy response should match the target response", func() {
-				// Log the response for debugging
-				fmt.Printf("Response Body: %s\n", w.Body.String())
-
 				So(w.Code, ShouldEqual, http.StatusOK)
 				So(w.Body.String(), ShouldEqual, "Mock Target Response")
 				So(w.Header().Get("mock-header"), ShouldEqual, "test")
+				So(upstreamReq.Host, ShouldEqual, originalHost)
 			})
 		})
 	})

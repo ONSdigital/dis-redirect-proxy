@@ -112,6 +112,7 @@ func newReverseProxy(proxiedUrl *url.URL) *httputil.ReverseProxy {
 		Rewrite: func(req *httputil.ProxyRequest) {
 			log.Info(req.In.Context(), "forwarding request to target", log.Data{"request_url": req.In.URL.String(), "target": proxiedUrl.String()})
 			req.SetURL(proxiedUrl)
+			req.Out.Host = req.In.Host
 			req.SetXForwarded()
 		},
 	}
