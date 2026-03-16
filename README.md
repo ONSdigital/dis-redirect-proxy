@@ -21,6 +21,18 @@ To run some of our tests you will need additional tooling:
 
 We use `dis-vulncheck` for auditing, which you will [need to install](https://github.com/ONSdigital/dis-vulncheck).
 
+#### Component testing
+
+To run the component tests, we use testcontainers via our dp-component-test library.
+
+To get setup, follow our guidance on using testcontainers
+
+If you're already setup, you will just need to ensure a docker daemon is running, for example via colima start.
+
+#### Linting
+
+We use v2 of golangci-lint, which you will [need to install](https://golangci-lint.run/docs/welcome/install).
+
 ### Configuration
 
 | Environment variable         | Default                  | Description                                                                                                        |
