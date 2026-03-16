@@ -108,12 +108,11 @@ func (proxy *Proxy) checkRedirect(checkURL string, ctx context.Context, redisCli
 func newReverseProxy(proxiedUrl *url.URL) *httputil.ReverseProxy {
 	// TODO add end request logging
 	// TODO consider other proxy options eg. timeouts, proxy-from-env etc. (see dp-frontend-router main.go for similar)
-	reverseProxy := httputil.NewSingleHostReverseProxy(proxiedUrl)
-	dir := reverseProxy.Director
-	reverseProxy.Director = func(req *http.Request) {
-		log.Info(req.Context(), "forwarding request to target", log.Data{"request_url": req.URL.String(), "target": proxiedUrl.String()})
-		dir(req)
+	return &httputil.ReverseProxy{
+		Rewrite: func(req *httputil.ProxyRequest) {
+			log.Info(req.In.Context(), "forwarding request to target", log.Data{"request_url": req.In.URL.String(), "target": proxiedUrl.String()})
+			req.SetURL(proxiedUrl)
+			req.SetXForwarded()
+		},
 	}
-
-	return reverseProxy
 }
