@@ -1,7 +1,7 @@
 application:
   repo_name: dis-redirect-proxy
 helm:
-  repo_name: dis-helm-legacy-chart
+  repo_name: dis-helm-legacy-service-chart
   values_files:
     image_tag_key: dis-redirect-proxy.image.tag
     sandbox:
