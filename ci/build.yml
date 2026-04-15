@@ -5,7 +5,7 @@ image_resource:
   type: registry-image
   source:
     repository: golang
-    tag: 1.26.1-bookworm
+    tag: 1.26.2-bookworm
     registry_mirror:
       host: ((ecr_repository_uri))
     aws_access_key_id: ((aws_access_key_id))
