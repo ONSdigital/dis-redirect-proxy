@@ -31,7 +31,7 @@ jobs:
       - name: Slack notification on failure
         # Only notify failures for periodic runs on main branch
         if: failure() && env.BRANCH_NAME == 'main'
-        uses: slackapi/slack-github-action@v3.0.1
+        uses: slackapi/slack-github-action@v3.0.2
         with:
           channel-id: ci-failures
           payload: |
