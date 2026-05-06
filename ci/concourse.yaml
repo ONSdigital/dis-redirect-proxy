@@ -7,6 +7,9 @@ helm:
     sandbox:
       - values/dis-sandbox-internal.yaml
       - values/dis-sandbox-external.yaml
+    staging:
+      - values/dis-staging-internal.yaml
+      - values/dis-staging-external.yaml
 aws:
   ecr:
     application: dis-redirect-proxy
