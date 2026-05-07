@@ -69,7 +69,7 @@ func (proxy *Proxy) redirectMiddleware(redisCli clients.Redis) mux.MiddlewareFun
 				return
 			}
 
-			redirectURL, err := proxy.checkRedirect(req.URL.String(), req.Context(), redisCli)
+			redirectURL, err := proxy.checkRedirect(req.URL.Path, req.Context(), redisCli)
 			if err == nil && redirectURL != "" {
 				// Redirect with 308 Permanent Redirect
 				http.Redirect(w, req, redirectURL, http.StatusPermanentRedirect)
@@ -90,7 +90,7 @@ func (proxy *Proxy) redirectMiddleware(redisCli clients.Redis) mux.MiddlewareFun
 
 // checkRedirect checks if a redirect exists in Redis
 func (proxy *Proxy) checkRedirect(checkURL string, ctx context.Context, redisClient clients.Redis) (string, error) {
-	// Get the redirect URL from Redis based on the incoming URL
+	// Get the redirect URL from Redis based on the incoming URL path
 	redirectURL, err := redisClient.GetValue(ctx, checkURL)
 	if err == disRedis.ErrKeyNotFound {
 		// If the key does not exist, return an empty string

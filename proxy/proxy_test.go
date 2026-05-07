@@ -119,6 +119,21 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 					So(parsedURL.Path, ShouldEqual, "/new-url")
 				})
 
+				Convey("When a request triggers a redirect with a query string", func() {
+					req, err := http.NewRequest("GET", "/old-url?foo=bar", http.NoBody)
+					So(err, ShouldBeNil)
+					rr := httptest.NewRecorder()
+					redirectProxy.Router.ServeHTTP(rr, req)
+
+					// Assert that a 308 redirect status is returned
+					So(rr.Code, ShouldEqual, http.StatusPermanentRedirect)
+
+					// Assert Redis lookup used path only
+					calls := redisClientMock.GetValueCalls()
+					So(calls, ShouldNotBeEmpty)
+					So(calls[len(calls)-1].Key, ShouldEqual, "/old-url")
+				})
+
 				Convey("When a request does not trigger a redirect", func() {
 					req, err := http.NewRequest("GET", nonRedirectURL, http.NoBody)
 					So(err, ShouldBeNil)
@@ -127,6 +142,21 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 
 					// Assert that a normal response (200 OK) is returned
 					So(rr.Code, ShouldEqual, http.StatusOK)
+				})
+
+				Convey("When a request does not trigger a redirect with a query string", func() {
+					req, err := http.NewRequest("GET", nonRedirectURL+"?foo=bar", http.NoBody)
+					So(err, ShouldBeNil)
+					rr := httptest.NewRecorder()
+					redirectProxy.Router.ServeHTTP(rr, req)
+
+					// Assert that a normal response (200 OK) is returned
+					So(rr.Code, ShouldEqual, http.StatusOK)
+
+					// Assert Redis lookup used path only
+					calls := redisClientMock.GetValueCalls()
+					So(calls, ShouldNotBeEmpty)
+					So(calls[len(calls)-1].Key, ShouldEqual, nonRedirectURL)
 				})
 
 				Convey("When a request is made to /health, Redis should not be contacted", func() {
