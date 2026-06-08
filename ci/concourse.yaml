@@ -10,6 +10,9 @@ helm:
     staging:
       - values/dis-staging-internal.yaml
       - values/dis-staging-external.yaml
+    production:
+      - values/dis-production-internal.yaml
+      - values/dis-production-external.yaml
 aws:
   ecr:
     application: dis-redirect-proxy
