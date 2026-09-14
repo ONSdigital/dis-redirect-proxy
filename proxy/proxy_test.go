@@ -16,7 +16,10 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-const nonRedirectURL = "/non-redirect-url"
+const (
+	nonRedirectURL         = "/non-redirect-url"
+	newConventionTargetURL = "http://localhost:8081/new-convention-target"
+)
 
 func TestSetup(t *testing.T) {
 	Convey("Given a Proxy instance", t, func() {
@@ -50,9 +53,9 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 				case "/old-url":
 					return "http://localhost:8081/new-url", nil
 				case "/new-convention-url":
-					return "http://localhost:8081/new-convention-target", nil
+					return newConventionTargetURL, nil
 				case "fwd:/new-convention-url":
-					return "http://localhost:8081/new-convention-target", nil
+					return newConventionTargetURL, nil
 				case nonRedirectURL:
 					return "", disRedis.ErrKeyNotFound
 				case "/health":

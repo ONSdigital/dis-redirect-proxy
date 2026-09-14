@@ -23,24 +23,24 @@ func TestConfig(t *testing.T) {
 				configuration, err = Get() // This Get() is only called once, when inside this function
 				So(err, ShouldBeNil)
 				So(configuration, ShouldResemble, &Config{
-					BindAddr:                   "localhost:30000",
+					BindAddr:                   defaultBindAddr,
 					EnableRedirects:            false,
 					EnableReleasesFallback:     false,
 					GracefulShutdownTimeout:    5 * time.Second,
 					HealthCheckInterval:        30 * time.Second,
 					HealthCheckCriticalTimeout: 90 * time.Second,
-					ProxiedServiceURL:          "http://localhost:20000",
+					ProxiedServiceURL:          defaultProxiedServiceURL,
 					OTBatchTimeout:             5 * time.Second,
-					OTExporterOTLPEndpoint:     "localhost:4317",
-					OTServiceName:              "dis-redirect-proxy",
+					OTExporterOTLPEndpoint:     defaultOTLPEndpoint,
+					OTServiceName:              defaultOTServiceName,
 					OtelEnabled:                false,
-					RedisAddress:               "localhost:6379",
+					RedisAddress:               defaultRedisAddress,
 					RedisClusterName:           "",
 					RedisRegion:                "",
 					RedisSecProtocol:           "",
 					RedisService:               "",
 					RedisUsername:              "",
-					WagtailURL:                 "http://localhost:8000",
+					WagtailURL:                 defaultWagtailURL,
 				})
 			})
 
