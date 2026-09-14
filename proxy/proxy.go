@@ -90,19 +90,20 @@ func (proxy *Proxy) redirectMiddleware(redisCli clients.Redis) mux.MiddlewareFun
 
 // checkRedirect checks if a redirect exists in Redis
 func (proxy *Proxy) checkRedirect(checkURL string, ctx context.Context, redisClient clients.Redis) (string, error) {
-	// Get the redirect URL from Redis based on the incoming URL path
-	redirectURL, err := redisClient.GetValue(ctx, checkURL)
-	if err == disRedis.ErrKeyNotFound {
-		// If the key does not exist, return an empty string
-		return "", nil
-	} else if err != nil {
-		// If an error occurs while checking Redis, log it and return the error
-		log.Error(ctx, "error checking Redis for redirect", err)
-		return "", err
+	for _, key := range []string{"fwd:" + checkURL, checkURL} {
+		redirectURL, err := redisClient.GetValue(ctx, key)
+		if err == nil {
+			return redirectURL, nil
+		}
+		if err != disRedis.ErrKeyNotFound {
+			// If an error occurs while checking Redis, log it and return the error
+			log.Error(ctx, "error checking Redis for redirect", err)
+			return "", err
+		}
 	}
 
-	// Return the found redirect URL
-	return redirectURL, nil
+	// If the key does not exist, return an empty string
+	return "", nil
 }
 
 func newReverseProxy(proxiedUrl *url.URL) *httputil.ReverseProxy {

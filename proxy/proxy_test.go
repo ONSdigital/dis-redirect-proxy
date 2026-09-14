@@ -49,12 +49,16 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 				switch key {
 				case "/old-url":
 					return "http://localhost:8081/new-url", nil
+				case "/new-convention-url":
+					return "http://localhost:8081/new-convention-target", nil
+				case "fwd:/new-convention-url":
+					return "http://localhost:8081/new-convention-target", nil
 				case nonRedirectURL:
 					return "", disRedis.ErrKeyNotFound
 				case "/health":
 					return "", nil
 				default:
-					return "", nil
+					return "", disRedis.ErrKeyNotFound
 				}
 			},
 		}
@@ -117,6 +121,19 @@ func TestProxyHandleRequestWithRedirect(t *testing.T) {
 
 					// Assert the final redirect path
 					So(parsedURL.Path, ShouldEqual, "/new-url")
+				})
+
+				Convey("When a prefixed redirect key exists", func() {
+					req, err := http.NewRequest("GET", "/new-convention-url", http.NoBody)
+					So(err, ShouldBeNil)
+					rr := httptest.NewRecorder()
+					redirectProxy.Router.ServeHTTP(rr, req)
+
+					So(rr.Code, ShouldEqual, http.StatusPermanentRedirect)
+					So(rr.Header().Get("Location"), ShouldEqual, "http://localhost:8081/new-convention-target")
+					calls := redisClientMock.GetValueCalls()
+					So(calls, ShouldHaveLength, 1)
+					So(calls[0].Key, ShouldEqual, "fwd:/new-convention-url")
 				})
 
 				Convey("When a request triggers a redirect with a query string", func() {
