@@ -41,6 +41,7 @@ func Setup(ctx context.Context, r *mux.Router, cfg *config.Config, redisCli clie
 	}
 
 	proxyHandler := newReverseProxy(proxiedUrl)
+	proxyHandler.Transport = newMeasuredTransport(http.DefaultTransport)
 
 	// If releases fallback is enabled, set up alternative handler
 	if cfg.EnableReleasesFallback {
@@ -50,6 +51,7 @@ func Setup(ctx context.Context, r *mux.Router, cfg *config.Config, redisCli clie
 			return nil, fmt.Errorf("failed to parse wagtail proxied service url: %w", err)
 		}
 		wagtailProxyHandler := newReverseProxy(wagtailProxy)
+		wagtailProxyHandler.Transport = newMeasuredTransport(http.DefaultTransport)
 
 		alternativeHandler := fallback.Try(wagtailProxyHandler).WhenStatus(http.StatusNotFound).Then(proxyHandler)
 		r.PathPrefix("/releases/").Name("Release alternative").Handler(alternativeHandler)
