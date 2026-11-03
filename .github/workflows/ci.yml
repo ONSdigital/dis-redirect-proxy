@@ -16,7 +16,7 @@ concurrency:
 # Single source of truth for tool versions
 env:
   GO_VERSION: '1.27.3'
-  GOLANGCI_LINT_VERSION: 'v2.10.1'
+  GOLANGCI_LINT_VERSION: 'v2.15.0'
 
 jobs:
   dis-redirect-proxy-audit:
