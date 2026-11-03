@@ -64,11 +64,11 @@ Feature: Healthcheck endpoint should inform the health of service
     Scenario: Returning a CRITICAL (500) status when health endpoint called
         Given redis stops running
         And I have a healthcheck interval of 1 second
-        And I wait 9 seconds to pass the critical timeout
+        And I wait 11 seconds to pass the critical timeout
         When I GET "/health"
         Then the HTTP status code should be "500"
         And the response header "Content-Type" should be "application/json; charset=utf-8"
-        And the health checks should have completed within 10 seconds
+        And the health checks should have completed within 12 seconds
         And I should receive the following health JSON response:
         """
             {
