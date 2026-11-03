@@ -1,5 +1,5 @@
 # The value of ECR_REPOSITORY_URI will be substituted by the Concourse build
-FROM {{ECR_REPOSITORY_URI}}/onsdigital/dp-concourse-tools-ubuntu-22:ubuntu22.4-jammy-20250126
+FROM {{ECR_REPOSITORY_URI}}/onsdigital/dp-concourse-tools-ubuntu-22:ubuntu22.04-jammy-20261020
 
 WORKDIR /app/
 
